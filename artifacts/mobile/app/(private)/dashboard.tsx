@@ -142,27 +142,26 @@ export default function DashboardScreen() {
         const kmFinal = tracking.kmAcumulado;
         const jornadaSnapshot = jornadaAtiva;
 
-        const doEncerrar = () => {
-          encerrar.mutate(
-            { jornada: jornadaSnapshot, kmReal: kmFinal },
-            {
-              onSuccess: () => {
-                tracking.reset();
-                showToast({ type: "success", message: "Jornada encerrada" });
-                void refetch();
-              },
-              onError: () => showToast({ type: "error", message: "Erro ao encerrar" }),
+        // Encerra imediatamente — sem esperar pelo flush do background
+        encerrar.mutate(
+          { jornada: jornadaSnapshot, kmReal: kmFinal },
+          {
+            onSuccess: () => {
+              tracking.reset();
+              showToast({ type: "success", message: "Jornada encerrada" });
+              void refetch();
             },
-          );
-        };
+            onError: (err) => {
+              console.error("[SOMA] Erro ao encerrar jornada:", err);
+              showToast({ type: "error", message: "Erro ao encerrar jornada" });
+            },
+          },
+        );
 
-        // Tenta salvar pontos do background; encerra a jornada independente do resultado
-        // Promise.race garante que doEncerrar é chamado mesmo se flushBackground travar (ex: web)
-        const flushPromise = tracking.flushBackground(perfil?.id ?? "");
-        const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 5000));
-        Promise.race([flushPromise, timeoutPromise])
-          .then(doEncerrar)
-          .catch(doEncerrar);
+        // Flush dos pontos de background em paralelo (não bloqueia o encerramento)
+        tracking.flushBackground(perfil?.id ?? "").catch((e: unknown) => {
+          console.warn("[SOMA] flushBackground falhou:", e);
+        });
       },
       onCancel: hideModal,
     });
