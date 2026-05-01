@@ -1,0 +1,224 @@
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { theme } from "@/lib/theme";
+import { dateEngine } from "@/engines/date-engine";
+import { useUI } from "@/hooks/UIContext";
+import { useAuth } from "@/hooks/AuthContext";
+import { useJornadas } from "@/hooks/useJornadas";
+import { jornadaEngine } from "@/engines/jornada-engine";
+import { AppHeader } from "@/components/ui/AppHeader";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppInput } from "@/components/ui/AppInput";
+import { AppCalendar } from "@/components/ui/AppCalendar";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FloatingButton } from "@/components/ui/FloatingButton";
+import { AppFooter } from "@/components/ui/AppFooter";
+import type { Jornada } from "@/lib/types";
+
+export default function MinhasJornadas() {
+  const insets = useSafeAreaInsets();
+  const { openDrawer, showModal, hideModal, showToast } = useUI();
+  const { perfil } = useAuth();
+  const [mes, setMes] = useState(new Date());
+  const { list, update, remove } = useJornadas(mes);
+
+  const [editing, setEditing] = useState<Jornada | null>(null);
+  const [edData, setEdData] = useState(new Date());
+  const [edHoras, setEdHoras] = useState("");
+  const [edMin, setEdMin] = useState("");
+  const [edKm, setEdKm] = useState("");
+
+  useEffect(() => {
+    if (!editing) return;
+    setEdData(dateEngine.parseISO(editing.data_jornada));
+    setEdHoras(String(editing.horas ?? 0));
+    setEdMin(String(editing.minutos ?? 0));
+    setEdKm(String(editing.km_percorrido_real ?? editing.km_percorrido ?? 0));
+  }, [editing?.id]);
+
+  const assinante = perfil?.assinante === true;
+  const hoje = new Date();
+  const minMes = new Date(hoje.getFullYear(), hoje.getMonth() - 2, 1);
+  const isAtMin = !assinante && (
+    mes.getFullYear() < minMes.getFullYear() ||
+    (mes.getFullYear() === minMes.getFullYear() && mes.getMonth() <= minMes.getMonth())
+  );
+  const isFuturo = mes.getFullYear() > hoje.getFullYear() ||
+    (mes.getFullYear() === hoje.getFullYear() && mes.getMonth() >= hoje.getMonth());
+
+  const irPrev = () => { if (!isAtMin) setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1)); };
+  const irNext = () => { if (!isFuturo) setMes(new Date(mes.getFullYear(), mes.getMonth() + 1, 1)); };
+
+  const totalKm = (list.data ?? []).reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
+  const totalMin = (list.data ?? []).reduce((s, j) => s + jornadaEngine.tempoTotalMinutos(j.horas ?? 0, j.minutos ?? 0), 0);
+
+  const confirmarRemover = (id: string) => {
+    showModal({
+      type: "confirm",
+      title: "Remover jornada?",
+      message: "Esta ação não poderá ser desfeita.",
+      confirmLabel: "Remover",
+      cancelLabel: "Cancelar",
+      onConfirm: async () => {
+        hideModal();
+        try {
+          await remove.mutateAsync(id);
+          showToast({ type: "success", message: "Jornada removida" });
+        } catch {
+          showToast({ type: "error", message: "Erro ao remover" });
+        }
+      },
+      onCancel: hideModal,
+    });
+  };
+
+  const salvarEdicao = async () => {
+    if (!editing) return;
+    const h = parseInt(edHoras || "0", 10);
+    const m = parseInt(edMin || "0", 10);
+    const k = parseFloat((edKm || "0").replace(",", "."));
+    const v = jornadaEngine.validar({ horas: h, minutos: m, km: k });
+    if (!v.ok) {
+      showToast({ type: "error", message: v.erro ?? "Dados inválidos" });
+      return;
+    }
+    try {
+      await update.mutateAsync({
+        id: editing.id,
+        patch: {
+          data_jornada: dateEngine.formatarISO(edData),
+          horas: h,
+          minutos: m,
+          km_percorrido: k,
+          km_percorrido_real: k,
+        },
+      });
+      showToast({ type: "success", message: "Jornada atualizada" });
+      setEditing(null);
+    } catch {
+      showToast({ type: "error", message: "Erro ao salvar" });
+    }
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <AppHeader title="Minhas Jornadas" subtitle="Histórico do mês" onMenuPress={openDrawer} />
+      <View style={styles.mesRow}>
+        <Pressable onPress={irPrev} hitSlop={10} disabled={isAtMin}><Ionicons name="chevron-back" size={20} color={isAtMin ? theme.colors.border : theme.colors.text} /></Pressable>
+        <Text style={styles.mesTxt}>{dateEngine.formatarMesAno(mes)}</Text>
+        <Pressable onPress={irNext} hitSlop={10} disabled={isFuturo}><Ionicons name="chevron-forward" size={20} color={isFuturo ? theme.colors.border : theme.colors.text} /></Pressable>
+      </View>
+
+      <View style={styles.statsRow}>
+        <StatChip label="Jornadas" valor={`${(list.data ?? []).length}`} icon="calendar" />
+        <StatChip label="Km totais" valor={`${totalKm.toFixed(0)}`} icon="speedometer" />
+        <StatChip label="Tempo" valor={`${Math.floor(totalMin / 60)}h${String(totalMin % 60).padStart(2, "0")}`} icon="time" />
+      </View>
+
+      {list.isLoading ? (
+        <View style={{ padding: 40 }}><ActivityIndicator color={theme.colors.primary} /></View>
+      ) : (
+        <FlatList
+          data={list.data ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 100 }}
+          ListEmptyComponent={
+            <AppCard>
+              <EmptyState icon="calendar" titulo="Sem jornadas no mês" mensagem="Toque no botão + para registrar." />
+            </AppCard>
+          }
+          ListFooterComponent={<AppFooter />}
+          renderItem={({ item }) => (
+            <AppCard style={{ marginBottom: 10 }}>
+              <View style={styles.cardRow}>
+                <View style={styles.dot}>
+                  <Text style={styles.dotDay}>{dateEngine.parseISO(item.data_jornada).getDate()}</Text>
+                  <Text style={styles.dotMon}>{dateEngine.mesCurto(item.data_jornada)}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTit}>{dateEngine.diaSemana(item.data_jornada)}</Text>
+                  <Text style={styles.cardSub}>{jornadaEngine.formatarTempo(item)} · {Number(item.km_percorrido).toFixed(0)} km</Text>
+                </View>
+                <Pressable onPress={() => setEditing(item)} hitSlop={6} style={{ marginRight: 10 }}>
+                  <Ionicons name="create-outline" size={20} color={theme.colors.primary} />
+                </Pressable>
+                <Pressable onPress={() => confirmarRemover(item.id)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
+                </Pressable>
+              </View>
+            </AppCard>
+          )}
+        />
+      )}
+      <FloatingButton icon="add" onPress={() => router.push("/(private)/registrar-jornada")} />
+
+      <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHead}>
+              <Text style={styles.modalTit}>Editar jornada</Text>
+              <Pressable onPress={() => setEditing(null)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={theme.colors.text} />
+              </Pressable>
+            </View>
+            <Text style={styles.label}>Data</Text>
+            <AppCalendar value={edData} onChange={setEdData} maxDate={dateEngine.hoje()} />
+            <View style={{ flexDirection: "row", marginTop: 8 }}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <AppInput label="Horas" keyboardType="numeric" value={edHoras} onChangeText={(t) => setEdHoras(t.replace(/\D/g, "").slice(0, 2))} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppInput label="Minutos" keyboardType="numeric" value={edMin} onChangeText={(t) => setEdMin(t.replace(/\D/g, "").slice(0, 2))} />
+              </View>
+            </View>
+            <AppInput label="Km percorrido" keyboardType="numeric" value={edKm} onChangeText={(t) => setEdKm(t.replace(/[^0-9.,]/g, ""))} />
+            <PrimaryButton label="Salvar alterações" icon="checkmark" onPress={salvarEdicao} loading={update.isPending} fullWidth size="lg" />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function StatChip({ label, valor, icon }: { label: string; valor: string; icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={statStyles.chip}>
+      <Ionicons name={icon} size={14} color={theme.colors.primary} />
+      <View>
+        <Text style={statStyles.label}>{label}</Text>
+        <Text style={statStyles.valor}>{valor}</Text>
+      </View>
+    </View>
+  );
+}
+
+const statStyles = StyleSheet.create({
+  chip: {
+    flex: 1, flexDirection: "row", alignItems: "center", gap: 8,
+    paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "#fff",
+    borderRadius: theme.radius.md, ...theme.shadow.soft, marginHorizontal: 4,
+  },
+  label: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.medium },
+  valor: { fontSize: 14, ...theme.font.bold, color: theme.colors.text },
+});
+
+const styles = StyleSheet.create({
+  mesRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22, paddingVertical: 12 },
+  mesTxt: { ...theme.font.semibold, fontSize: 15, color: theme.colors.text },
+  statsRow: { flexDirection: "row", paddingHorizontal: 10, marginBottom: 6 },
+  cardRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  dot: { width: 48, height: 48, borderRadius: 12, backgroundColor: theme.colors.primary + "12", justifyContent: "center", alignItems: "center" },
+  dotDay: { ...theme.font.bold, fontSize: 16, color: theme.colors.primary },
+  dotMon: { ...theme.font.medium, fontSize: 9, color: theme.colors.primaryDark, textTransform: "uppercase" },
+  cardTit: { ...theme.font.semibold, fontSize: 14, color: theme.colors.text },
+  cardSub: { ...theme.font.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: 16 },
+  modalCard: { backgroundColor: "#fff", borderRadius: theme.radius.lg, padding: 16, ...theme.shadow.soft, maxHeight: "92%" },
+  modalHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  modalTit: { ...theme.font.bold, fontSize: 16, color: theme.colors.text },
+  label: { ...theme.font.medium, fontSize: 13, color: theme.colors.text, marginBottom: 6 },
+});

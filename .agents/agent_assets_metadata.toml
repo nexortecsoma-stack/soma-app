@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "LQ7UPbG_Bv_3aMp_SX2Oy"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "soma app icon"

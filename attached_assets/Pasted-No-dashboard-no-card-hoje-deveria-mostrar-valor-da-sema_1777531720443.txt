@@ -1,0 +1,88 @@
+No dashboard, no card hoje, deveria mostrar valor da semana e no card essa semana, deveria mostrar o mês.
+Abaixo dos dois card de ganhos da semana e mês. Deveria ter o botão, iniciar jornada.
+Apos iniciar jornada, mostrar contador de tempo total até o encerramento, a quantidade de km percorrido, se pausado,tem que ter o segundo contador de tempo, que vai mostrar somente o tempo trabalhado.
+No card meta do mês tem que mostrar o valor da próxima meta diária. Levando em conta os dias úteis do mês que o usuário definil como dias trabalhaveis, exemplo 2 folgas por semana, 8 dias de folga. Mês 30 dias 22 dias úteis. Então vai pegar o saldo da meta mensal e dividir pelos dias restantes. 
+No gráfico de barras colocar valor formato R$600,00
+Colocar uma seta para mostrar gráficos das semanas
+Abaixo do seg. Colocar o dia exemplo seg 02, ter 03 os número abaixo.
+
+Colocar botão redondo flutuante e transparente no final do canto direto da página para abrir registro de jornada.
+
+Na tela registro de jornada o calendário deve marcar dias sem jornada com fundo vermelho, e verde com jornada.
+Tempo trabalhado, os dois inputs hora e min deve ser menores para caber o input km na mesma linha. 
+Nessa mesma página deve ter o lançamento de ganhos.
+Dropdown com as plataformas fixas Uber, 99, indrive, Ifood, entrega, particular. E as que o usuário salvar a parte.
+Input valor e corrida na mesma linha, input corrida menor, já que só usa 2 dígitos.
+Abaixo mostrar resumo mostrando o valor do combustível estimado, litros e média de consumo e de preço do combustível.
+Não precisa de input observação nos ganhos. 
+Antes do botão salvar jornada, 
+Registrar despesa e  lançar abastecimento.
+Lembrança que a tela deve ser burra, só mostrar dados 
+Não pode haver duas jornadas e ganhos duplicado no mesmo dia.
+
+Na página meus ganhos, ao clicar no card, ele deve espanadir e mostrar o valor de cada plataforma e corridas naquele dia. O ícone editar abrir o modal centralizado e não embaixo como está acontecendo quando clica na plataforma.
+O input valor e corrida deve ficar na mesma linha. 
+
+Na tela adicionar despesa, outros deve abrir input para usuário digitar o nome da despesa.
+
+Na tela abastecimento, no card do valor total, mostrar qual é a média de consumo atual com base nos últimos 30 lançamento e o valor médio do combustível ou energia 
+
+Na parte de novo lançamento de combustível 
+Calor e tipo de combustível na mesma linha, litros deve ser preenchido automático já que o usuário será obrigado a colocar o valor do combustível, isso é que vai alimentar o banco e trazer a média de preço e consumo mais próximo da realidade.
+Preço por litro e autonomia na mesma linha e obrigatório.
+Retirar tipo de uso e observação 
+
+Na tela veículo. Não precisa de km atual, somente o hodômetro inicial com ponto de milhar 100.000.
+Hodômetro e valor FIPE na mesma linha.
+
+Propriedade abrir opções centralizado e não embaixo da tela.
+Tipo de tração 
+Ao escolher, isso vai definir o que vai ser mostrado 
+Consumo. Se for flex, mostrar apenas gasolina e etanol 
+Se GNV, mostrar gasolina, etanol e GNV
+Se elétrico, mostrar apenas energia, se híbrido mostrar apenas gasolina e energia.
+
+Seguro, se anual nostrar opção centralizado também, se mensal colocar valor, dia de vencimento.
+Se anual opção data do início do contrato  
+Abaixo colocar chavinha para usuário escolher percentual de depreciação.
+1 ano de uso 12%
+2 anos de uso 10%
+3 anos de uso 8%
+4 anos de uso 6%
+5 anos ou mais 4%
+E opção para usuário colocar a porcentagem que ele acha que o carro deprecia.
+Só pode acionar uma chave. 
+Tela plataforma mostrar as plataformas fixas com chavinha
+Uber, 99, indrive, Ifood, entrega, particular 
+O valor das manutenções devem ser mostradas nas despesas fixas como despesas variáveis, e também deve mostrar o valor delas em dias. Tendo o termo inicial a dada da despesa e termo final a data de duração. 
+
+No ranking os filtros deve ter Chips que abre modal com opções. 
+Métrica, UF, categoria, tipo de tração, tipo de propriedade 
+No card do ranking deve ter foto, nome público, categoria, cidade, UF tipo de tração. Valor bruto, líquido ganho por hora ganho por km.
+No perfil o avatar deve fazer upload de foto para ranking.
+
+Reveja o aplicativo, pq quase tudo está dando erro ao salvar.
+
+No meu não tem dúvidas frequentes, sobre o soma, e contato para suporte.
+Nem opção para página de compras com detalhamento de cada plano
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

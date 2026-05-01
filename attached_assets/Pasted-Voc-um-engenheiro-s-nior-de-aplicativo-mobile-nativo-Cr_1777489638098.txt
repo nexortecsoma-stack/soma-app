@@ -1,0 +1,1265 @@
+Você é um engenheiro sênior de aplicativo mobile nativo.
+
+Crie um aplicativo NATIVO para publicação futura na Play Store e Apple Store.
+
+NOME DO APP:
+SOMA
+
+SIGNIFICADO:
+Sistema Orçamentário para Motorista de Aplicativo
+
+OBJETIVO:
+Criar um aplicativo para motoristas de aplicativo controlarem jornada, ganhos, despesas, abastecimentos, veículo, manutenção, metas e custos fixos.
+
+TECNOLOGIAS OBRIGATÓRIAS:
+- Expo
+- React Native
+- TypeScript
+- Expo Router
+- Supabase
+- React Native Reanimated se necessário para animações
+- Biblioteca de calendário reutilizável
+- Biblioteca de gráficos reutilizável
+- Ícones modernos e coloridos
+
+REGRA PRINCIPAL DO PROJETO:
+As telas NÃO fazem lógica.
+As telas são burras.
+As telas apenas:
+- exibem dados
+- capturam inputs
+- chamam hooks
+- mostram loading
+- mostram modal
+- navegam
+
+Toda regra de negócio deve ficar em:
+- hooks/
+- services/
+- engines/
+- lib/
+
+NÃO usar dados mockados.
+Tudo deve vir do banco Supabase.
+Não criar ranking agora.
+Não criar jornada automática por GPS agora.
+Deixar a arquitetura preparada para receber ranking e jornada automática no futuro.
+
+PADRÃO VISUAL:
+- Azul escuro com gradiente brilhante
+- Ciano como cor de destaque
+- UI moderna, limpa, com cards arredondados
+- Ícones coloridos
+- Inputs grandes, sem bordas internas estranhas
+- Inputs sempre sobem junto com teclado
+- Criar solução reutilizável para teclado/input
+- Layout parecido com os modelos enviados:
+  - dashboard moderno com header azul/ciano
+  - cards arredondados
+  - gráficos limpos
+  - tela de login com topo em gradiente
+  - telas de veículo em cards e etapas
+  - tela de plataformas com switches
+
+========================
+ARQUITETURA
+========================
+
+Criar estrutura:
+
+app/
+  (public)/
+    splash.tsx
+    login.tsx
+    register.tsx
+    termos.tsx
+
+  (private)/
+    dashboard.tsx
+    registrar-jornada.tsx
+    minhas-jornadas.tsx
+    ganhos.tsx
+    meus-ganhos.tsx
+    despesas.tsx
+    minhas-despesas.tsx
+    abastecimentos.tsx
+    veiculos.tsx
+    plataformas.tsx
+    manutencoes.tsx
+    despesas-fixas.tsx
+    configuracoes.tsx
+    perfil.tsx
+    conferir-hodometro.tsx
+
+components/
+  ui/
+    AppHeader.tsx
+    AppInput.tsx
+    MaskedInput.tsx
+    CurrencyInput.tsx
+    AppKeyboardView.tsx
+    PrimaryButton.tsx
+    FloatingButton.tsx
+    AppCard.tsx
+    AppDropdown.tsx
+    AppCalendar.tsx
+    AppBarChart.tsx
+    AppDonutChart.tsx
+    AppProgressBar.tsx
+    CustomModal.tsx
+    AppBottomMenu.tsx
+
+hooks/
+  useAuth.ts
+  useProtectedRoute.ts
+  useOnboard.ts
+  useDashboard.ts
+  useJornada.ts
+  useGanhos.ts
+  useDespesas.ts
+  useAbastecimentos.ts
+  usePlataformas.ts
+  useVeiculo.ts
+  useManutencoes.ts
+  useDespesasFixas.ts
+  useConfiguracoes.ts
+  useConferenciaHodometro.ts
+
+services/
+  auth-service.ts
+  profile-service.ts
+  veiculo-service.ts
+  jornada-service.ts
+  ganhos-service.ts
+  despesas-service.ts
+  abastecimentos-service.ts
+  plataformas-service.ts
+  manutencoes-service.ts
+  despesas-fixas-service.ts
+  configuracoes-service.ts
+  conferencia-hodometro-service.ts
+  dashboard-service.ts
+
+engines/
+  cpf-engine.ts
+  mask-engine.ts
+  currency-engine.ts
+  date-engine.ts
+  jornada-engine.ts
+  onboard-validation-engine.ts
+  financeiro-engine.ts
+  combustivel-engine.ts
+  meta-engine.ts
+  manutencao-engine.ts
+  despesa-fixa-engine.ts
+  dashboard-engine.ts
+  hodometro-engine.ts
+
+lib/
+  supabase.ts
+  constants.ts
+  theme.ts
+  types.ts
+
+========================
+ROTAS PÚBLICAS
+========================
+
+SPLASH:
+- Exibir logo SOMA com animação suave
+- Verificar sessão Supabase
+- Se não logado, enviar para Login
+- Se logado, enviar para Dashboard
+
+LOGIN:
+Layout parecido com o modelo enviado:
+- topo em gradiente azul escuro
+- logo SOMA
+- subtítulo: “Gerencie seus ganhos como motorista”
+- card branco arredondado
+- título: “Bem-vindo de volta”
+- campos:
+  - E-mail
+  - Senha
+- Enter troca foco do input
+- Botão Entrar
+- Botão Criar conta
+- Link Esqueci minha senha
+- Rodapé:
+  “Desenvolvido por Nexor-Tec - 2026”
+- Login com Supabase Auth
+
+CADASTRO:
+Campos:
+- Email
+- Senha
+- Aceite de termos
+
+Regras:
+- Só cadastra se aceitar termos
+- Salvar data e hora do aceite no banco
+- Criar usuário no Supabase Auth
+- Criar profile no banco
+- CPF NÃO é pedido no cadastro
+- CPF será pedido apenas no onboard
+
+TERMOS:
+- Tela simples com scroll
+- Texto dos termos
+- Botão voltar
+
+========================
+REGRA DE ACESSO / ONBOARD
+========================
+
+Usuário pode navegar por todas as telas sem onboard completo.
+
+PORÉM:
+Qualquer botão de SALVAR, EDITAR, EXCLUIR ou CONFIRMAR lançamento só funciona se o onboard estiver completo.
+
+Se onboard estiver incompleto:
+- Mostrar modal bloqueando ação
+- Texto explicando que precisa completar perfil e veículo antes de salvar dados
+- Botão “Completar agora”
+- Botão “Depois”
+
+O onboard precisa validar:
+- profile básico completo
+- veículo completo
+- consumo/combustível configurado
+- hodômetro inicial informado
+
+A validação fica em:
+engines/onboard-validation-engine.ts
+
+A tela não valida regra de negócio.
+
+========================
+CPF
+========================
+
+CPF será registrado apenas no onboard.
+
+Regras:
+- CPF obrigatório no onboard
+- CPF com máscara visual no input
+- CPF salvo no banco sem máscara
+- Validar CPF real usando algoritmo oficial
+- Bloquear CPF inválido
+- Bloquear CPF repetido no banco
+- CPF só pode ser salvo uma única vez
+- Depois de validado e salvo, CPF fica bloqueado para edição
+- Somente administrador pode alterar CPF direto no banco
+- A tela apenas mostra o campo bloqueado quando já existir CPF
+- Validação em engines/cpf-engine.ts
+- Verificação de duplicidade em services/profile-service.ts
+
+========================
+PLANOS
+========================
+
+Não implementar pagamento real agora.
+
+Criar controle no banco:
+- assinante boolean
+- plano text: free, mensal, semestral, anual
+- data_inicio
+- data_fim
+
+Plano Free:
+- pode escolher apenas 2 plataformas fixas
+- pode adicionar apenas 1 plataforma extra
+- pode visualizar lançamentos dos últimos 3 meses
+- pode registrar jornadas, ganhos, despesas e abastecimentos básicos
+- não pode acessar relatórios avançados
+- não pode acessar ranking
+- não pode acessar algumas análises avançadas
+- ao tentar acessar recurso Pro, abrir modal: “Seja Pro”
+
+Plano Pro:
+- mensal: R$ 29,00
+- semestral: R$ 99,90
+- anual: R$ 129,00
+- mostrar valor por dia
+- plataformas liberadas
+- histórico completo
+- relatórios
+- despesas fixas
+- manutenção
+- metas avançadas
+
+Não criar pagamento real.
+Apenas preparar banco e UI para upgrade manual.
+
+========================
+DASHBOARD
+========================
+
+Tela deve seguir o modelo enviado.
+
+Header:
+- Fundo em gradiente azul escuro/ciano
+- Saudação:
+  “Bom dia, Motorista”
+  ou “Bom dia, {primeiro nome}”
+- Subtítulo:
+  “Seu controle financeiro começa no detalhe.”
+- Avatar circular com a primeira letra do nome
+- Badge do plano:
+  “Gratuito” ou “Pro”
+- Menu sanduíche no lado esquerdo
+- Menu abre lento e deslizante
+- Menu reutilizável em todas as páginas
+
+Menu lateral:
+- Avatar com letra do nome
+- Saudação
+- E-mail usado
+- Configurações
+- Perfil
+- Jornada
+- Minhas Jornadas
+- Meus Ganhos
+- Minhas Despesas
+- Plataformas
+- Veículos
+- Manutenções
+- Despesas Fixas
+- Conferir Hodômetro
+- Dúvidas Frequentes
+- Sobre o SOMA
+- Suporte e contato
+- Sair
+
+Dashboard conteúdo:
+Card principal:
+- Ganho de Hoje
+- Valor grande
+- Comparação com ontem
+- Quantidade de corridas
+- Barra de progresso da meta diária
+- Percentual da meta diária
+
+Mini cards:
+- Esta Semana
+- Este Mês
+- Valor bruto
+- Valor líquido
+- Total despesas
+- Total custos fixos discreto
+- Barra de evolução relacionada à meta
+
+Seleção de mês:
+- Seta esquerda
+- Seta direita
+- Mostrar mês selecionado
+- Dashboard muda os dados conforme mês
+
+Gráfico:
+- Gráfico de barras semanal, estilo Uber
+- Segunda a domingo
+- Mostrar dias abreviados: Seg, Ter, Qua, Qui, Sex, Sáb, Dom
+- Linha pontilhada no maior ganho
+- Mostrar valor no final da linha pontilhada
+
+Gráfico rosca:
+- Mostrar porcentagem de:
+  - ganhos totais
+  - despesas totais
+  - combustível
+  - custo fixo
+  - limpeza
+  - multa
+  - estacionamento
+  - alimentação
+  - manutenção
+  - outras categorias existentes
+
+Última jornada:
+- Data
+- Dia da semana
+- Plataforma
+- Corridas
+- Valor
+
+Acesso rápido:
+- Perfil
+- Veículos
+- Plataformas
+- Relatórios
+- Jornadas
+- Ganhos
+- Despesas
+- Abastecimentos
+
+Botão flutuante:
+- “Registrar Jornada”
+- Leva para tela registrar-jornada
+
+IMPORTANTE:
+- Dashboard não calcula nada
+- Dashboard chama useDashboard
+- useDashboard chama dashboard-service
+- dashboard-service busca dados
+- dashboard-engine monta os indicadores
+- meta-engine calcula metas
+- financeiro-engine calcula valores
+- combustivel-engine calcula combustível
+- despesa-fixa-engine calcula custos fixos
+
+========================
+REGISTRAR JORNADA
+========================
+
+Tela deve seguir exatamente o padrão do modelo enviado.
+
+Layout:
+- Header com botão voltar
+- Título: Registrar Jornada
+- Calendário grande no topo
+- Dia selecionado destacado com borda azul
+- Dias com jornada ficam verdes
+- Dias sem jornada ficam vermelhos
+- Dia atual pode ter cor neutra se não selecionado
+- Texto:
+  “Data selecionada: DD/MM/AAAA”
+
+Inputs pequenos na mesma linha:
+- Horas
+- Minutos
+- KM Percorrido
+
+Os 3 inputs devem ficar na mesma linha.
+Inputs pequenos e alinhados.
+Hora e minuto com 2 dígitos.
+KM com até 3 dígitos inicialmente, mas permitir km maior se necessário.
+
+Botões grandes abaixo:
+- Lançar Ganhos
+- Lançar Despesas
+- Abastecimento
+
+Regras:
+- Jornada é manual agora
+- Não usar GPS agora
+- Não usar acelerômetro agora
+- Não criar jornada automática agora
+- Salvar data, horas, minutos e km rodado
+- O combustível estimado da jornada será calculado pelo combustivel-engine
+- A tela não calcula combustível
+
+========================
+MINHAS JORNADAS
+========================
+
+Tela de lista:
+- listar todas as jornadas do usuário
+- filtro por mês
+- card com data, horas, minutos, km, ganho bruto, ganho líquido
+- botão editar
+- botão apagar
+- confirmação antes de apagar
+- edição abre formulário reaproveitado
+
+Regra:
+- preparar edição e exclusão desde o início
+- lógica em hook/service
+
+========================
+GANHOS
+========================
+
+Tela para lançar ganhos.
+
+Campos:
+- plataforma
+- valor em R$
+- corridas
+- data vinculada à jornada
+- observação opcional
+
+Regras:
+- Valor formatado automaticamente
+- Corridas com 2 dígitos inicialmente
+- Salvar em ganhos
+- Ao salvar ganho, atualizar indicadores via hooks/engines
+- Não buscar tudo novamente toda hora se já tiver estado local consistente
+- Persistir no Supabase
+
+Cálculo:
+- Ao registrar ganho, o sistema usa a jornada relacionada para calcular custo estimado de combustível
+- Primeiro lançamento usa dados do onboard/veículo
+- Depois usa média global dos últimos 30 abastecimentos do usuário
+
+========================
+MEUS GANHOS
+========================
+
+Tela de lista:
+- listar ganhos
+- filtro por mês
+- mostrar plataforma, data, valor, corridas
+- botão editar
+- botão apagar
+- confirmação antes de apagar
+
+========================
+DESPESAS
+========================
+
+Categorias iniciais:
+- Limpeza
+- Alimentação
+- Multa
+- Estacionamento
+- Internet
+- Manutenção
+- Outros
+
+Cada categoria abre campos:
+- data
+- valor
+- observação
+
+Regras:
+- Salvar em despesas
+- Valor em moeda
+- Tela não calcula nada
+- Preparar editar e apagar
+
+========================
+MINHAS DESPESAS
+========================
+
+Tela de lista:
+- listar despesas
+- filtro por mês
+- mostrar categoria, data, valor, observação
+- botão editar
+- botão apagar
+- confirmação antes de apagar
+
+========================
+ABASTECIMENTOS
+========================
+
+Criar tela/tabela própria para abastecimentos.
+
+Motivo:
+Abastecimento é lançamento recorrente.
+Não deve ficar dentro da tabela veículo.
+
+Campos:
+- id
+- profile_id
+- veiculo_id
+- data_abastecimento
+- valor_total
+- litros
+- preco_por_litro
+- tipo_combustivel: gasolina, etanol, gnv, energia
+- autonomia_km_litro
+- consumo_kwh se elétrico
+- valor_kwh se elétrico
+- uso: trabalho, pessoal, misto
+- observacao
+- created_at
+- updated_at
+
+Tela de lançamento:
+- Ao clicar em Abastecimento, abrir tela/formulário
+- Campos já vêm preenchidos com médias globais
+- Usuário confirma ou edita antes de salvar
+- Salvar abastecimento
+- Atualizar média dos últimos 30 abastecimentos
+
+Regras:
+- combustivel-engine calcula média
+- abastecimentos-service busca últimos 30 registros
+- tela só exibe
+
+========================
+CONFERIR HODÔMETRO / USO PESSOAL
+========================
+
+Criar tela:
+“Conferir uso pessoal”
+
+Objetivo:
+Permitir ao usuário descobrir quanto está gastando de combustível em uso pessoal sem precisar informar hodômetro em toda jornada.
+
+Regra:
+- Hodômetro inicial é registrado uma única vez no onboard do veículo
+- Usuário não informa hodômetro em toda jornada
+- De tempos em tempos, o usuário abre “Conferir uso pessoal”
+- Digita apenas:
+  - data da conferência
+  - hodômetro atual
+
+O sistema calcula:
+- último hodômetro consultado
+- hodômetro atual
+- km total rodado no período
+- soma dos km trabalhados desde a última conferência
+- km pessoal no período
+
+Fórmulas:
+km_total_periodo = hodometro_atual - hodometro_anterior
+km_trabalho_periodo = soma dos km das jornadas desde a última conferência
+km_pessoal_periodo = km_total_periodo - km_trabalho_periodo
+
+Também calcular:
+- percentual de uso trabalho
+- percentual de uso pessoal
+- custo estimado do combustível usado no trabalho
+- custo estimado do combustível usado no uso pessoal
+
+Criar tabela:
+conferencias_hodometro
+
+Campos:
+- id
+- profile_id
+- veiculo_id
+- data_conferencia
+- hodometro_anterior
+- hodometro_atual
+- km_total_periodo
+- km_trabalho_periodo
+- km_pessoal_periodo
+- percentual_trabalho
+- percentual_pessoal
+- custo_estimado_trabalho
+- custo_estimado_pessoal
+- created_at
+- updated_at
+
+Motor:
+engines/hodometro-engine.ts
+
+Serviço:
+services/conferencia-hodometro-service.ts
+
+Hook:
+hooks/useConferenciaHodometro.ts
+
+========================
+PLATAFORMAS
+========================
+
+Tela igual ao modelo enviado.
+
+Lista fixa inicial:
+- Uber
+- 99Pop
+- InDrive
+- iFood
+- Entregas
+- Particular
+
+Layout:
+- Header com título Plataformas
+- Subtítulo com quantidade ativa
+- Card azul escuro explicativo
+- Lista com cards brancos
+- Ícone colorido
+- Nome da plataforma
+- Descrição: “Plataforma do app”
+- Switch para ativar/desativar
+- Card “Adicionar outra plataforma”
+
+Regras plano free:
+- Pode ativar apenas 2 plataformas fixas
+- Pode adicionar 1 plataforma extra
+- Se tentar passar disso, abrir modal Pro
+
+Salvar em plataformas.
+
+========================
+PERFIL / ONBOARD
+========================
+
+Tela em etapas.
+
+STEP 1 — USUÁRIO:
+- Nome
+- Telefone
+- CPF
+- Cidade
+- UF dropdown
+
+Regras:
+- CPF fica bloqueado depois de validado
+- Telefone salvo sem máscara
+- CPF salvo sem máscara
+- UF com dropdown
+
+STEP 2 — VEÍCULO:
+Tela igual aos modelos enviados.
+Cards de etapas:
+A - Identificação
+B - Consumos
+C - Posse
+D - Seguro/IPVA
+E - Revisão final
+
+Tabela:
+veiculo
+
+Tudo relacionado ao veículo fica na tabela veiculo.
+Não criar várias tabelas para veículo.
+
+Campos identificação:
+- placa
+- uf_placa
+- nome_veiculo
+- ano
+- km_atual
+- hodometro_inicial
+- valor_fipe
+
+Campos posse:
+- tipo_propriedade: proprio, financiado, alugado
+
+Se financiado:
+- valor_parcela
+- data_vencimento
+- data_fim_contrato
+- lancar_automaticamente boolean
+
+Se alugado:
+- tipo_aluguel: semanal, quinzenal, mensal
+- valor_aluguel
+- vencimento
+- dia_semana_vencimento
+- lancar_automaticamente boolean
+- equivalencia_mensal_soma calculada pelo engine
+
+Seguro:
+- tem_seguro boolean
+- tipo_seguro: mensal, anual
+- valor_seguro
+- data_inicio_seguro
+- data_fim_seguro
+- lancar_automaticamente boolean
+
+IPVA:
+- isento_ipva boolean
+- considerar_ipva_automatico boolean
+
+Tração:
+- tipo_tracao: flex, eletrico, hibrido, gnv
+
+Combustível:
+- gasolina_valor
+- gasolina_consumo_km_l
+- etanol_valor
+- etanol_consumo_km_l
+- gnv_valor
+- gnv_consumo_km_m3
+- consumo_principal
+
+Elétrico:
+- bateria
+- consumo_kwh
+- valor_kwh
+
+Regras:
+- Hodômetro inicial é obrigatório
+- Hodômetro inicial é registrado uma vez
+- Consumo inicial é obrigatório
+- Preço médio do combustível inicial é obrigatório
+- Esses dados alimentam o primeiro cálculo antes de existirem abastecimentos
+
+========================
+CONFIGURAÇÕES
+========================
+
+Tela Configurações ligada à tabela profile/configuracoes_usuario.
+
+Campos:
+- Meta mensal
+  padrão: R$ 10.000,00
+- Meta semanal calculada:
+  meta_mensal / 4
+- Quantidade de dias de folga na semana:
+  1, 2, 3 ou 4 dias
+- Considerar IPVA automático: sim/não
+- Considerar seguro automático: sim/não
+- Considerar depreciação automática: sim/não
+- Considerar custo fixo internet: sim/não
+- Considerar manutenções básicas: sim/não
+- Considerar custo SOMA automático: sim/não
+  padrão: não
+- Participar do ranking SOMA: sim/não
+  padrão: não
+  Não implementar ranking agora, apenas salvar preferência
+- Mostrar ganhos líquidos e brutos: sim/não
+  padrão: sim
+
+Regras de meta:
+Exemplo:
+Meta mensal = R$ 10.000
+Meta semanal = R$ 2.500
+
+Se usuário escolhe 2 dias de folga por semana:
+2 x 4 = 8 dias de folga estimados no mês
+Se mês tem 31 dias:
+31 - 8 = 23 dias úteis de meta
+
+Meta diária:
+10.000 / 23 = meta diária base
+
+Se em um dia a meta era R$ 500 e o usuário fez R$ 400:
+Diferença = R$ 100
+Essa diferença deve ser redistribuída nos dias restantes do mês
+
+Se o usuário fizer acima da meta:
+Excedente pode reduzir a meta dos dias restantes
+
+Essas regras ficam em:
+engines/meta-engine.ts
+
+Tela não calcula meta.
+
+========================
+CUSTO FIXO
+========================
+
+Ponto muito importante do app.
+
+O SOMA deve calcular custo fixo diário do motorista.
+
+Custos fixos iniciais:
+- IPVA
+- Seguro
+- Depreciação
+- Internet
+- Aluguel do veículo
+- Financiamento
+- Custo SOMA
+- Manutenções básicas, se ativado
+
+Criar tela:
+Despesas Fixas
+
+Objetivo:
+Mostrar quanto o motorista precisa pagar por dia só para manter o carro e o trabalho funcionando.
+
+A tela deve mostrar:
+- custo fixo mensal
+- custo fixo diário
+- custo fixo por jornada
+- custo fixo acumulado no mês
+- custo fixo restante até fim do mês
+- custos ativos e inativos
+
+Regras:
+- Nada disso é calculado na tela
+- Tudo no despesa-fixa-engine.ts
+
+IPVA:
+- Considerar UF do carro
+- Considerar valor FIPE
+- Considerar tipo de tração: flex, elétrico, híbrido, gnv
+- Criar estrutura para tabela de alíquotas por estado
+- Alguns estados podem ter isenção/redução para elétrico/híbrido
+- Deixar tabela preparada para alíquota, isenção e observação
+
+Criar tabela:
+ipva_aliquotas
+
+Campos:
+- id
+- uf
+- tipo_veiculo
+- tipo_tracao
+- aliquota
+- tem_isencao
+- percentual_reducao
+- observacao
+- created_at
+- updated_at
+
+Cálculo IPVA:
+valor_ipva = valor_fipe * aliquota
+
+Resultado SOMA integral:
+- Considera período de 1º de janeiro a 31 de dezembro
+- Divide o valor anual por 365 dias
+- Mostra custo diário integral
+
+IPVA SOMA parcial:
+- Considera a data do primeiro lançamento de jornada
+- Vai da data do primeiro lançamento até 31 de dezembro
+- Divide proporcionalmente pelo número de dias restantes
+- Mostra custo diário parcial
+
+Seguro:
+- Se anual:
+  dividir valor pelo período do seguro
+- Se mensal:
+  dividir valor mensal por dias do mês
+- Também mostrar visão integral e parcial
+
+Aluguel:
+- Se semanal:
+  equivalência mensal = valor semanal x 4
+- Se quinzenal:
+  equivalência mensal = valor quinzenal x 2
+- Se mensal:
+  equivalência mensal = valor mensal
+- Calcular custo diário
+- Se usuário não trabalhar em um dia, o custo daquele dia não desaparece
+- O custo deve ser diluído nos dias restantes
+
+Financiamento:
+- Usar valor da parcela
+- Vencimento
+- Data fim contrato
+- Calcular custo mensal e diário
+
+Depreciação:
+- Criar regra inicial simples:
+  permitir percentual mensal ou anual configurável
+- Usar valor FIPE como base
+- Exemplo:
+  depreciacao_mensal = valor_fipe * percentual
+- Deixar motor preparado para evoluir depois
+
+Internet:
+- Valor mensal configurável
+- Custo diário = valor mensal / dias do mês
+
+Custo SOMA:
+- Começa desligado
+- Se ativado, usar valor do plano como custo fixo
+- Mensal/semestral/anual deve ser convertido em custo diário
+
+Manutenções básicas:
+- Se ativado, usar manutencao-engine para estimar custo proporcional por km ou tempo
+
+Regra importante:
+O número de dias restantes nunca pode ignorar dia não trabalhado.
+
+Exemplo:
+Restam 300 dias.
+Usuário não trabalha hoje.
+O custo fixo de hoje deve ser redistribuído nos próximos dias.
+O app deve mostrar:
+- dias considerados
+- dias trabalhados
+- dias não trabalhados
+- custo acumulado
+- custo redistribuído
+- novo custo diário necessário
+
+Essas regras ficam em:
+engines/despesa-fixa-engine.ts
+
+========================
+MANUTENÇÕES
+========================
+
+Criar tela Manutenções.
+
+Lista de manutenções básicas:
+- Suspensão e amortecedores
+  duração: 60.000 km ou 1 ano
+- Jogo de pneus
+  pneu 1, pneu 2, pneu 3, pneu 4
+  valor individual
+  duração: 50.000 km ou 1 ano
+- Bateria carro combustão
+  duração: 2 anos
+- Troca de óleo e filtros
+  duração: 10.000 km ou 6 meses
+- Freios e pastilhas
+  duração: 30.000 km ou 1 ano
+- Outros
+
+Campos:
+- tipo_manutencao
+- data_manutencao
+- valor
+- km_troca
+- duracao_km
+- duracao_meses
+- observacao
+
+Tela:
+- listar manutenções
+- mostrar barra de evolução
+- mostrar percentual de vida útil
+- mostrar alerta quando estiver perto de vencer
+- botão editar
+- botão apagar
+
+Motor:
+engines/manutencao-engine.ts
+
+========================
+BANCO DE DADOS SUPABASE
+========================
+
+Criar SQL completo e idempotente.
+
+Tabelas:
+- profile
+- veiculo
+- jornadas
+- ganhos
+- despesas
+- abastecimentos
+- plataformas
+- manutencoes
+- configuracoes_usuario
+- despesas_fixas
+- conferencias_hodometro
+- assinaturas
+- ipva_aliquotas
+
+Usar RLS.
+Usuário só acessa dados dele.
+Criar policies para select, insert, update, delete usando auth.uid().
+
+Tabela profile:
+- id uuid primary key references auth.users
+- email
+- nome
+- telefone
+- cpf unique
+- cidade
+- uf
+- termos_aceite_em
+- assinante boolean default false
+- plano text default free
+- meta_mensal numeric default 10000
+- dias_folga_semana integer default 2
+- considerar_ipva_automatico boolean default true
+- considerar_seguro_automatico boolean default true
+- considerar_depreciacao_automatico boolean default true
+- considerar_internet_automatico boolean default false
+- considerar_manutencoes_basicas boolean default false
+- considerar_custo_soma_automatico boolean default false
+- participar_ranking_soma boolean default false
+- mostrar_ganhos_liquidos_brutos boolean default true
+- created_at
+- updated_at
+
+Tabela veiculo:
+- id uuid
+- profile_id uuid
+- placa
+- uf_placa
+- nome_veiculo
+- ano
+- km_atual
+- hodometro_inicial
+- valor_fipe
+- tipo_propriedade
+- valor_parcela
+- data_vencimento
+- data_fim_contrato
+- tipo_aluguel
+- valor_aluguel
+- vencimento
+- dia_semana_vencimento
+- aluguel_lancar_automaticamente
+- tem_seguro
+- tipo_seguro
+- valor_seguro
+- data_inicio_seguro
+- data_fim_seguro
+- seguro_lancar_automaticamente
+- isento_ipva
+- tipo_tracao
+- gasolina_valor
+- gasolina_consumo_km_l
+- etanol_valor
+- etanol_consumo_km_l
+- gnv_valor
+- gnv_consumo_km_m3
+- bateria
+- consumo_kwh
+- valor_kwh
+- created_at
+- updated_at
+
+Tabela jornadas:
+- id
+- profile_id
+- veiculo_id
+- data_jornada
+- horas
+- minutos
+- km_percorrido
+- tempo_total_minutos
+- created_at
+- updated_at
+
+Tabela ganhos:
+- id
+- profile_id
+- jornada_id
+- plataforma_id
+- data_ganho
+- valor
+- corridas
+- observacao
+- created_at
+- updated_at
+
+Tabela despesas:
+- id
+- profile_id
+- jornada_id nullable
+- categoria
+- data_despesa
+- valor
+- observacao
+- created_at
+- updated_at
+
+Tabela abastecimentos:
+- id
+- profile_id
+- veiculo_id
+- data_abastecimento
+- valor_total
+- litros
+- preco_por_litro
+- tipo_combustivel
+- autonomia_km_litro
+- consumo_kwh
+- valor_kwh
+- uso
+- observacao
+- created_at
+- updated_at
+
+Tabela plataformas:
+- id
+- profile_id
+- nome
+- tipo
+- ativa boolean
+- fixa boolean
+- created_at
+- updated_at
+
+Tabela manutencoes:
+- id
+- profile_id
+- veiculo_id
+- tipo_manutencao
+- data_manutencao
+- valor
+- km_troca
+- duracao_km
+- duracao_meses
+- observacao
+- created_at
+- updated_at
+
+Tabela conferencias_hodometro:
+- id
+- profile_id
+- veiculo_id
+- data_conferencia
+- hodometro_anterior
+- hodometro_atual
+- km_total_periodo
+- km_trabalho_periodo
+- km_pessoal_periodo
+- percentual_trabalho
+- percentual_pessoal
+- custo_estimado_trabalho
+- custo_estimado_pessoal
+- created_at
+- updated_at
+
+Tabela assinaturas:
+- id
+- profile_id
+- plano
+- assinante
+- data_inicio
+- data_fim
+- created_at
+- updated_at
+
+Tabela ipva_aliquotas:
+- id
+- uf
+- tipo_veiculo
+- tipo_tracao
+- aliquota
+- tem_isencao
+- percentual_reducao
+- observacao
+- created_at
+- updated_at
+
+========================
+COMPONENTES REUTILIZÁVEIS
+========================
+
+Criar AppCalendar:
+- usado em registrar jornada
+- recebe dias com jornada
+- recebe dias sem jornada
+- recebe dia selecionado
+- não busca dados sozinho
+- não calcula nada
+
+Criar AppBarChart:
+- usado no dashboard
+- recebe dados prontos
+- mostra linha pontilhada do maior valor
+- mostra valor no fim da linha
+
+Criar AppDonutChart:
+- usado no dashboard
+- recebe categorias e percentuais prontos
+
+Criar AppHeader:
+- reutilizável
+- aceita título, subtítulo, botão voltar, menu sanduíche
+
+Criar AppInput:
+- sem borda interna estranha
+- com ícone opcional
+- preparado para teclado
+
+Criar AppKeyboardView:
+- solução reutilizável para inputs subirem com teclado
+
+Criar CustomModal:
+- bloqueio de onboard
+- confirmação de exclusão
+- recurso Pro
+- sucesso
+- erro
+
+========================
+REGRAS FINAIS
+========================
+
+- Não usar dados mockados
+- Não colocar lógica em tela
+- Não permitir CPF inválido
+- Não permitir CPF duplicado
+- Não salvar CPF/telefone com máscara
+- CPF só salva uma vez
+- Todos os dados persistem no Supabase
+- Botões de salvar só funcionam com onboard completo
+- Criar telas de editar e apagar para jornadas, ganhos, despesas, abastecimentos e manutenções
+- Código limpo, organizado e escalável
+- TypeScript bem tipado
+- Criar engines para cálculos
+- Criar hooks para orquestração
+- Criar services para Supabase
+- Criar componentes reutilizáveis para calendário e gráficos
+- Preparar arquitetura para ranking futuro, mas não implementar ranking agora
+- Preparar arquitetura para jornada automática futura, mas não implementar GPS agora

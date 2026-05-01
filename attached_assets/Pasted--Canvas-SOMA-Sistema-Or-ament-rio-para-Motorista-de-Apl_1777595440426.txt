@@ -1,0 +1,122 @@
+
+
+Canvas
+
+SOMA - Sistema Orçamentário para Motorista de Aplicativo
+
+Simulate on Web
+
+
+
+Try on device
+
+Preview on your phone
+Test on a mobile device to experience touch gestures and native features.
+1
+Download Expo Go
+A free app that lets you run your project instantly.
+iOS
+Android
+2
+Scan the QR code
+Use your camera to scan the code and launch Expo Go.
+Shake your device to open Expo Go's menu, then tap Reload to see your changes.
+Ready to publish to App Store?
+Go live with your app and landing page, then submit to App Store.
+
+Publish
+Fix icons displaying as foreign characters by loading them correctly
+
+
+
+
+Show previous messages
+
+Checkpoint made
+41 minutes ago
+
+Worked for 2 minutes
+agora a foto do web ta uma bosta parecendo times new rown... e os icones no expo e android nao apareceram, vc consguriu piorar mais
+
+37 minutes ago
+
+5 messages & 43 actions
+
+Checkpoint made
+29 minutes ago
+
+Worked for 8 minutes
+mas que merda e essa? pq esta tao dificil de arrumar ? no android ainda nao apareece os icones agora o web esta com uma fonte bosta
+
+24 minutes ago
+
+5 messages & 43 actions
+
+Checkpoint made
+17 minutes ago
+
+Worked for 6 minutes
+essa merda da jornada automatica ta sendo salva onde? ja que nao criamos tabela pra ela?
+
+17 minutes ago
+
+1 message & 7 actions
+
+Worked for 24 seconds
+agora o que vc fez que nao é possivel mais colocar foto no perfil?
+
+15 minutes ago
+
+3 messages & 28 actions
+
+Checkpoint made
+11 minutes ago
+
+Worked for 3 minutes
+em outro app android os icones estao aparecendo em chines ou japones... sei la que merda é essa
+
+10 minutes ago
+
+2 messages & 8 actions
+
+Checkpoint made
+7 minutes ago
+
+Worked for 2 minutes
+pq o web ainda ta com essa merda de fonte?
+
+4 minutes ago
+
+3 actions
+A fonte ainda aparece errada porque a web depende do Google Fonts CDN e do jsDelivr, que podem demorar ou estar bloqueados. Na verdade, o Metro do Expo serve os assets locais como URLs relativas acessíveis pelo proxy do Replit — posso carregar as fontes direto dos arquivos locais em web também, sem depender de nenhum CDN:
+
+
+2 actions
+No web o Font.loadAsync consegue usar os assets locais (o Metro serve-os como URLs relativas acessíveis pelo proxy). Vou unificar o carregamento para ambas plataformas usando os arquivos locais — sem CDN:
+
+
+2 actions
+Também preciso atualizar o theme.ts — na web ele ainda retorna fontFamily: "Inter" (dependente do CDN), mas agora a fonte está registrada no expo-font como Inter_400Regular. Vou unificar:
+
+
+2 actions
+Agora unifico o theme.ts para usar os mesmos nomes de fonte em todas as plataformas — sem dependência do CDN no web:
+
+
+6 actions
+Also update the render guard — now that theme.font uses the same names on all platforms, we need to wait for fonts on web too. Metro serves local assets fast enough that the delay is imperceptible:
+
+
+2 actions
+Remove the unused Platform import from _layout.tsx now:
+
+
+Thinking...
+
+Scroll to latest
+
+Queue
+
+o botão atualizar minha posiçao no rankig da erro quando clica?
+
+eu consigo fazer uma apk para usar esse web bem ?

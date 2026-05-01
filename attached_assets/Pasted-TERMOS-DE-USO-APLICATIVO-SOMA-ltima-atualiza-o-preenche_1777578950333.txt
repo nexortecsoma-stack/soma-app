@@ -1,0 +1,221 @@
+TERMOS DE USO – APLICATIVO SOMA
+
+Última atualização: [preencher]
+
+1. ACEITAÇÃO DOS TERMOS
+
+Ao acessar ou utilizar o aplicativo SOMA, o usuário declara que leu, compreendeu e concorda integralmente com estes Termos de Uso e com a Política de Privacidade.
+
+2. SOBRE O SOMA
+
+O SOMA é um aplicativo de gestão financeira e operacional voltado para motoristas de aplicativo, com foco na apuração de resultados reais, incluindo custos operacionais muitas vezes não considerados pelo usuário.
+
+O SOMA não garante resultados financeiros.
+
+3. CADASTRO DO USUÁRIO
+
+O usuário se compromete a:
+
+Fornecer informações verdadeiras
+Manter seus dados atualizados
+Proteger suas credenciais
+
+O usuário é responsável por toda atividade realizada em sua conta.
+
+4. FUNCIONALIDADES
+
+O SOMA poderá oferecer:
+
+Registro de jornadas (manual e automático)
+Controle de ganhos e despesas
+Relatórios financeiros
+Ranking de desempenho
+Metas financeiras
+
+O SOMA poderá modificar, suspender ou descontinuar funcionalidades a qualquer momento.
+
+5. RANKING, EXPOSIÇÃO E COMPARTILHAMENTO
+5.1 Participação
+
+A participação no ranking é totalmente opcional, podendo o usuário:
+
+Ativar ou desativar sua participação
+Ocultar sua posição
+Utilizar nome público ou anonimizado
+5.2 Dados exibidos
+
+Poderão ser exibidos:
+
+Indicadores financeiros (ganho bruto e líquido)
+Categoria do veículo
+Cidade/UF
+Índices de desempenho
+5.3 Dados protegidos
+
+O SOMA não divulgará em nenhuma hipótese:
+
+CPF
+RG
+Placas de veículos
+Dados bancários
+Informações sensíveis
+5.4 Compartilhamento em redes sociais
+
+O usuário participante do ranking poderá compartilhar suas informações e posição em redes sociais, desde que:
+
+Não altere ou distorça os dados apresentados
+Não utilize de forma enganosa ou fraudulenta
+Não associe o SOMA a promessas irreais ou garantias de ganhos
+
+O SOMA não se responsabiliza pelo uso indevido dessas informações fora da plataforma.
+
+5.5 Uso indevido do ranking
+
+É proibido:
+
+Manipular dados para obter vantagem no ranking
+Utilizar o ranking para enganar terceiros
+Criar falsas representações de desempenho
+6. PROPRIEDADE INTELECTUAL E USO DE IMAGENS
+
+Todo o conteúdo do aplicativo SOMA é protegido por direitos autorais, incluindo:
+
+Interface
+Layout
+Design
+Marca
+Funcionalidades
+Relatórios e gráficos
+6.1 Uso permitido
+
+O usuário poderá:
+
+Utilizar o aplicativo para fins pessoais
+Compartilhar prints ou informações em redes sociais (uso não comercial)
+6.2 Uso proibido
+
+É expressamente proibido, sem autorização prévia e formal do SOMA:
+
+Comercializar imagens, prints ou qualquer conteúdo do aplicativo
+Utilizar o app para fins comerciais indiretos (ex: venda de cursos usando a interface)
+Revender, licenciar ou explorar economicamente qualquer conteúdo
+Copiar ou replicar o design ou funcionalidades
+6.3 Penalidades
+
+O descumprimento poderá resultar em:
+
+Suspensão da conta
+Exclusão do usuário
+Medidas judiciais cabíveis
+7. RESPONSABILIDADES DO USUÁRIO
+
+O usuário se compromete a:
+
+Utilizar o app de forma ética e legal
+Não violar direitos de terceiros
+Não tentar acessar sistemas internos
+8. LIMITAÇÃO DE RESPONSABILIDADE
+
+O SOMA não se responsabiliza por:
+
+Decisões financeiras do usuário
+Dados inseridos incorretamente
+Falhas externas (GPS, internet, APIs)
+Perdas financeiras
+9. SUSPENSÃO E ENCERRAMENTO DO SERVIÇO
+
+O usuário declara ciência de que:
+
+O SOMA poderá, a qualquer tempo e a seu exclusivo critério, encerrar, suspender ou limitar suas atividades, de forma total ou parcial, permanente ou temporária, sem necessidade de aviso prévio.
+
+Isso pode ocorrer por:
+
+Motivos técnicos
+Estratégicos
+Comerciais
+Legais
+
+Nesses casos:
+
+O serviço poderá deixar de existir
+Dados poderão ser excluídos
+Não haverá direito a indenização
+10. ALTERAÇÕES DOS TERMOS
+
+O SOMA poderá alterar estes termos a qualquer momento.
+
+11. FORO
+
+Fica eleito o foro da comarca de Belo Horizonte – MG.
+
+POLÍTICA DE PRIVACIDADE – SOMA
+
+Última atualização: [preencher]
+
+1. DADOS COLETADOS
+1.1 Informações fornecidas
+Nome
+Email
+CPF
+Telefone
+Cidade/UF
+Dados do veículo
+Informações financeiras
+1.2 Dados automáticos
+Localização (se autorizada)
+Quilometragem
+Tempo de jornada
+Interações no app
+2. FINALIDADE
+
+Os dados são utilizados para:
+
+Operação do aplicativo
+Cálculo de resultados
+Relatórios
+Ranking (quando autorizado)
+Melhorias
+3. COMPARTILHAMENTO
+
+O SOMA:
+
+Não vende dados
+Não compartilha dados sensíveis
+Pode compartilhar dados anonimizados
+4. RANKING E PRIVACIDADE
+Participação opcional
+Controle total do usuário
+Nenhum dado sensível exposto
+5. SEGURANÇA
+
+Medidas técnicas são utilizadas, mas não há garantia absoluta.
+
+6. DIREITOS DO USUÁRIO
+
+O usuário pode:
+
+Acessar
+Corrigir
+Excluir dados
+Sair do ranking
+7. RETENÇÃO
+
+Dados serão mantidos enquanto necessário.
+
+8. ENCERRAMENTO DO SERVIÇO
+
+Caso o SOMA seja encerrado:
+
+Dados podem ser excluídos
+Não haverá obrigação de continuidade
+9. ALTERAÇÕES
+
+Podem ocorrer a qualquer momento.
+
+10. CONTATO
+
+[SEU EMAIL]
+
+11. FORO
+
+Belo Horizonte – MG.
