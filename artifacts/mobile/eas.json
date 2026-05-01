@@ -7,11 +7,6 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY": "COLOQUE_AQUI_SUA_CHAVE_TEST",
-        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "COLOQUE_AQUI_SUA_CHAVE_IOS",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "COLOQUE_AQUI_SUA_CHAVE_ANDROID"
       }
     },
     "production": {
@@ -21,11 +16,6 @@
       },
       "ios": {
         "resourceClass": "m-medium"
-      },
-      "env": {
-        "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY": "COLOQUE_AQUI_SUA_CHAVE_TEST",
-        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "COLOQUE_AQUI_SUA_CHAVE_IOS",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "COLOQUE_AQUI_SUA_CHAVE_ANDROID"
       }
     }
   }
