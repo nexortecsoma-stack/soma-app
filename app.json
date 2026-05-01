@@ -4,6 +4,9 @@
       "eas": {
         "projectId": "297e177d-004e-4248-9b0e-2054a65018f0"
       }
+    },
+    "android": {
+      "package": "com.soma.app"
     }
   }
 }
