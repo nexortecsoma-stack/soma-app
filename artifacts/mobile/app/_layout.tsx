@@ -33,11 +33,8 @@ const INTER_FONTS = {
   Inter_700Bold: require("../assets/fonts/Inter_700Bold.ttf"),
 };
 
-try {
-  initializeRevenueCat();
-} catch {
-  /* RevenueCat indisponível */
-}
+// initializeRevenueCat já trata todos os erros internamente
+initializeRevenueCat();
 
 SplashScreen.preventAutoHideAsync();
 

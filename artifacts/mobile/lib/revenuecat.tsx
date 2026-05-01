@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useRef } from "react";
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -10,42 +10,59 @@ const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_AP
 
 export const REVENUECAT_ENTITLEMENT_IDENTIFIER = "pro";
 
-function getRevenueCatApiKey() {
-  if (!REVENUECAT_TEST_API_KEY || !REVENUECAT_IOS_API_KEY || !REVENUECAT_ANDROID_API_KEY) {
-    throw new Error("Chaves de API do RevenueCat não encontradas");
-  }
+// Flag global — true somente se configure() foi chamado com sucesso
+let _rcInitialized = false;
 
+function getRevenueCatApiKey(): string | null {
+  if (!REVENUECAT_TEST_API_KEY || !REVENUECAT_IOS_API_KEY || !REVENUECAT_ANDROID_API_KEY) {
+    return null;
+  }
   if (__DEV__ || Platform.OS === "web" || Constants.executionEnvironment === "storeClient") {
     return REVENUECAT_TEST_API_KEY;
   }
-
   if (Platform.OS === "ios") return REVENUECAT_IOS_API_KEY;
   if (Platform.OS === "android") return REVENUECAT_ANDROID_API_KEY;
-
   return REVENUECAT_TEST_API_KEY;
 }
 
 export function initializeRevenueCat() {
-  const apiKey = getRevenueCatApiKey();
-  Purchases.setLogLevel(Purchases.LOG_LEVEL.ERROR);
-  Purchases.configure({ apiKey });
+  try {
+    const apiKey = getRevenueCatApiKey();
+    if (!apiKey) return; // chaves não configuradas — skip silencioso
+    Purchases.setLogLevel(Purchases.LOG_LEVEL.ERROR);
+    Purchases.configure({ apiKey });
+    _rcInitialized = true;
+  } catch {
+    _rcInitialized = false;
+  }
+}
+
+export function isRevenueCatReady() {
+  return _rcInitialized;
 }
 
 function useSubscriptionContext() {
+  const ready = useRef(_rcInitialized).current;
+
   const customerInfoQuery = useQuery({
     queryKey: ["revenuecat", "customer-info"],
     queryFn: () => Purchases.getCustomerInfo(),
     staleTime: 60 * 1000,
+    enabled: ready,
+    retry: false,
   });
 
   const offeringsQuery = useQuery({
     queryKey: ["revenuecat", "offerings"],
     queryFn: () => Purchases.getOfferings(),
     staleTime: 300 * 1000,
+    enabled: ready,
+    retry: false,
   });
 
   const purchaseMutation = useMutation({
     mutationFn: async (packageToPurchase: any) => {
+      if (!_rcInitialized) throw new Error("RevenueCat não inicializado");
       const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
       return customerInfo;
     },
@@ -53,7 +70,10 @@ function useSubscriptionContext() {
   });
 
   const restoreMutation = useMutation({
-    mutationFn: () => Purchases.restorePurchases(),
+    mutationFn: () => {
+      if (!_rcInitialized) throw new Error("RevenueCat não inicializado");
+      return Purchases.restorePurchases();
+    },
     onSuccess: () => customerInfoQuery.refetch(),
   });
 
@@ -64,7 +84,7 @@ function useSubscriptionContext() {
     customerInfo: customerInfoQuery.data,
     offerings: offeringsQuery.data,
     isSubscribed,
-    isLoading: customerInfoQuery.isLoading || offeringsQuery.isLoading,
+    isLoading: ready ? (customerInfoQuery.isLoading || offeringsQuery.isLoading) : false,
     purchase: purchaseMutation.mutateAsync,
     restore: restoreMutation.mutateAsync,
     isPurchasing: purchaseMutation.isPending,
