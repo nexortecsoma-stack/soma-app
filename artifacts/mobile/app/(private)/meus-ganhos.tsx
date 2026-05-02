@@ -1,17 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { dateEngine } from "@/engines/date-engine";
@@ -20,19 +18,17 @@ import { combustivelEngine } from "@/engines/combustivel-engine";
 import { despesaFixaEngine } from "@/engines/despesa-fixa-engine";
 import { CATEGORIAS_DESPESA } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
+import { jornadaService } from "@/services/jornada-service";
 import { useUI } from "@/hooks/UIContext";
 import { useGanhos } from "@/hooks/useGanhos";
 import { useAuth } from "@/hooks/AuthContext";
 import { AppHeader } from "@/components/ui/AppHeader";
 import { AppCard } from "@/components/ui/AppCard";
-import { AppInput } from "@/components/ui/AppInput";
-import { AppCalendar } from "@/components/ui/AppCalendar";
-import { AppDropdown } from "@/components/ui/AppDropdown";
-import { CurrencyInput } from "@/components/ui/CurrencyInput";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FloatingButton } from "@/components/ui/FloatingButton";
 import { AppFooter } from "@/components/ui/AppFooter";
+import { EditarDiaModal } from "@/components/modals/EditarDiaModal";
+import type { SavePayload } from "@/components/modals/EditarDiaModal";
 import type { Abastecimento, Despesa, IpvaAliquota, Jornada, Manutencao, Ganho, Plataforma } from "@/lib/types";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -124,13 +120,10 @@ export default function MeusGanhos() {
   const [mes, setMes] = useState(new Date());
   const mesKey = `${mes.getFullYear()}-${mes.getMonth()}`;
 
-  const { list, update, remove } = useGanhos(mes);
+  const { list, create, update, remove } = useGanhos(mes);
+  const queryClient = useQueryClient();
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Ganho | null>(null);
-  const [edData, setEdData] = useState(new Date());
-  const [edValor, setEdValor] = useState(0);
-  const [edCorridas, setEdCorridas] = useState("");
-  const [edPlataformaId, setEdPlataformaId] = useState<string | null>(null);
+  const [editandoData, setEditandoData] = useState<string | null>(null);
 
   // Plataformas (query separada, carrega rápido e fica em cache)
   const plataformasQuery = useQuery<Plataforma[]>({
@@ -190,13 +183,6 @@ export default function MeusGanhos() {
     });
   }, [suplemento.data, perfil, veiculo]);
 
-  useEffect(() => {
-    if (!editing) return;
-    setEdData(dateEngine.parseISO(editing.data_ganho));
-    setEdValor(Number(editing.valor) || 0);
-    setEdCorridas(editing.corridas != null ? String(editing.corridas) : "");
-    setEdPlataformaId(editing.plataforma_id ?? null);
-  }, [editing?.id]);
 
   const total = (list.data ?? []).reduce((s, g) => s + (Number(g.valor) || 0), 0);
   const corridas = (list.data ?? []).reduce((s, g) => s + (Number(g.corridas) || 0), 0);
@@ -214,17 +200,30 @@ export default function MeusGanhos() {
   const irPrev = () => { if (!isAtMin) setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1)); };
   const irNext = () => { if (!isFuturo) setMes(new Date(mes.getFullYear(), mes.getMonth() + 1, 1)); };
 
-  const removerGanho = (id: string) => {
+  const removerGanho = (g: Ganho, ganhosDia: Ganho[]) => {
+    const isUltimo = ganhosDia.length === 1;
     showModal({
       type: "confirm",
       title: "Remover ganho?",
-      message: "Esta ação não pode ser desfeita.",
+      message: isUltimo
+        ? "Isso também removerá a jornada do dia, pois não haverá mais ganhos registrados."
+        : "Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
       cancelLabel: "Cancelar",
       onConfirm: async () => {
         hideModal();
         try {
-          await remove.mutateAsync(id);
+          await remove.mutateAsync(g.id);
+          if (isUltimo) {
+            const jornadaDoDia = suplemento.data?.jornadas.find(
+              (j) => j.data_jornada === g.data_ganho,
+            );
+            if (jornadaDoDia) {
+              await jornadaService.remove(jornadaDoDia.id);
+              queryClient.invalidateQueries({ queryKey: ["jornadas"] });
+              suplemento.refetch();
+            }
+          }
           showToast({ type: "success", message: "Ganho removido" });
         } catch {
           showToast({ type: "error", message: "Erro ao remover" });
@@ -232,27 +231,6 @@ export default function MeusGanhos() {
       },
       onCancel: hideModal,
     });
-  };
-
-  const salvarEdicao = async () => {
-    if (!editing) return;
-    if (edValor <= 0) { showToast({ type: "error", message: "Informe o valor" }); return; }
-    try {
-      await update.mutateAsync({
-        id: editing.id,
-        patch: {
-          data_ganho: dateEngine.formatarISO(edData),
-          valor: edValor,
-          corridas: parseInt(edCorridas || "0", 10) || 0,
-          plataforma_id: edPlataformaId,
-        },
-      });
-      showToast({ type: "success", message: "Ganho atualizado" });
-      setEditing(null);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Tente novamente";
-      showModal({ type: "error", title: "Erro ao salvar", message: msg });
-    }
   };
 
   // Agrupa ganhos por data
@@ -263,6 +241,70 @@ export default function MeusGanhos() {
     ganhosPorData.get(d)!.push(g);
   }
   const datasUnicas = Array.from(ganhosPorData.keys()).sort((a, b) => b.localeCompare(a));
+
+  const editandoJornada = useMemo(
+    () =>
+      editandoData
+        ? (suplemento.data?.jornadas.find((j) => j.data_jornada === editandoData) ?? null)
+        : null,
+    [editandoData, suplemento.data],
+  );
+  const ganhosDoDiaEditando = editandoData ? (ganhosPorData.get(editandoData) ?? []) : [];
+
+  const marcadoresGanhos = useMemo(() => {
+    const datasComGanho = new Set(Array.from(ganhosPorData.keys()));
+    const hoje = dateEngine.hoje();
+    const resultado: { iso: string; cor: string }[] = [];
+    for (let i = 1; i <= 60; i++) {
+      const d = dateEngine.somarDias(hoje, -i);
+      const iso = dateEngine.formatarISO(d);
+      resultado.push({ iso, cor: datasComGanho.has(iso) ? theme.colors.success : "#EF4444" });
+    }
+    return resultado;
+  }, [ganhosPorData]);
+
+  const datasOcupadasGanhos = useMemo(
+    () => Array.from(ganhosPorData.keys()).filter((d) => d !== editandoData),
+    [ganhosPorData, editandoData],
+  );
+
+  const isSavingEdicao = remove.isPending || update.isPending || create.isPending;
+
+  const handleSaveEdicao = async (payload: SavePayload) => {
+    try {
+      for (const id of payload.ganhoDeletes) {
+        await remove.mutateAsync(id);
+      }
+      for (const g of payload.ganhoUpdates) {
+        await update.mutateAsync({
+          id: g.id,
+          patch: { data_ganho: g.data_ganho, plataforma_id: g.plataforma_id, valor: g.valor, corridas: g.corridas },
+        });
+      }
+      for (const g of payload.ganhoCreates) {
+        await create.mutateAsync({
+          jornada_id: g.jornada_id,
+          plataforma_id: g.plataforma_id,
+          data_ganho: g.data_ganho,
+          valor: g.valor,
+          corridas: g.corridas,
+        });
+      }
+      if (payload.jornadaPatch && editandoJornada) {
+        await jornadaService.update(editandoJornada.id, {
+          data_jornada: payload.novaDataISO,
+          ...payload.jornadaPatch,
+        });
+        queryClient.invalidateQueries({ queryKey: ["jornadas"] });
+        suplemento.refetch();
+      }
+      showToast({ type: "success", message: "Dia atualizado" });
+      setEditandoData(null);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Tente novamente";
+      showToast({ type: "error", message: msg });
+    }
+  };
 
   // Calcula breakdown para um dia
   function calcDia(dataISO: string, ganhosBruto: number, corridasDia: number) {
@@ -410,10 +452,10 @@ export default function MeusGanhos() {
                           <Text style={styles.platSub}>{Number(g.corridas) || 0} corridas</Text>
                         </View>
                         <Text style={styles.platVal}>{currencyEngine.formatar(Number(g.valor))}</Text>
-                        <Pressable onPress={() => setEditing(g)} hitSlop={8} style={styles.editBtn}>
+                        <Pressable onPress={() => setEditandoData(dataISO)} hitSlop={8} style={styles.editBtn}>
                           <Ionicons name="create-outline" size={16} color={theme.colors.primary} />
                         </Pressable>
-                        <Pressable onPress={() => removerGanho(g.id)} hitSlop={8} style={styles.editBtn}>
+                        <Pressable onPress={() => removerGanho(g, ganhosDia)} hitSlop={8} style={styles.editBtn}>
                           <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
                         </Pressable>
                       </View>
@@ -534,56 +576,18 @@ export default function MeusGanhos() {
       )}
       <FloatingButton icon="play-circle" onPress={() => router.push("/(private)/registrar-jornada")} />
 
-      {/* Modal de edição */}
-      <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHead}>
-              <Text style={styles.modalTit}>Editar ganho</Text>
-              <Pressable onPress={() => setEditing(null)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={theme.colors.text} />
-              </Pressable>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.calLabel}>Data</Text>
-              <AppCalendar value={edData} onChange={setEdData} maxDate={dateEngine.hoje()} />
-              <AppDropdown
-                label="Plataforma"
-                value={edPlataformaId}
-                onChange={setEdPlataformaId}
-                options={[
-                  ...(plataformasQuery.data ?? [])
-                    .filter((p) => p.id !== null)
-                    .map((p) => ({ label: p.nome, value: p.id! })),
-                ]}
-                placeholder="Particular / sem plataforma"
-              />
-              <View style={styles.row2}>
-                <View style={{ flex: 3 }}>
-                  <CurrencyInput label="Valor recebido" value={edValor} onChangeValue={setEdValor} />
-                </View>
-                <View style={{ width: 10 }} />
-                <View style={{ flex: 2 }}>
-                  <AppInput
-                    label="Corridas"
-                    keyboardType="numeric"
-                    value={edCorridas}
-                    onChangeText={(t) => setEdCorridas(t.replace(/\D/g, "").slice(0, 3))}
-                  />
-                </View>
-              </View>
-              <PrimaryButton
-                label="Salvar alterações"
-                icon="checkmark"
-                onPress={salvarEdicao}
-                loading={update.isPending}
-                fullWidth
-                size="lg"
-              />
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      <EditarDiaModal
+        visible={!!editandoData}
+        onClose={() => setEditandoData(null)}
+        dataISO={editandoData ?? ""}
+        jornada={editandoJornada}
+        ganhosDia={ganhosDoDiaEditando}
+        datasOcupadas={datasOcupadasGanhos}
+        marcadores={marcadoresGanhos}
+        plataformas={plataformasQuery.data ?? []}
+        onSave={handleSaveEdicao}
+        isSaving={isSavingEdicao}
+      />
     </View>
   );
 }

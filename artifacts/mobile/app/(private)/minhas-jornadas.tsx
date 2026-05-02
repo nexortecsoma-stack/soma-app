@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,37 +8,27 @@ import { dateEngine } from "@/engines/date-engine";
 import { useUI } from "@/hooks/UIContext";
 import { useAuth } from "@/hooks/AuthContext";
 import { useJornadas } from "@/hooks/useJornadas";
+import { useGanhos } from "@/hooks/useGanhos";
+import { usePlataformas } from "@/hooks/usePlataformas";
 import { jornadaEngine } from "@/engines/jornada-engine";
 import { AppHeader } from "@/components/ui/AppHeader";
 import { AppCard } from "@/components/ui/AppCard";
-import { AppInput } from "@/components/ui/AppInput";
-import { AppCalendar } from "@/components/ui/AppCalendar";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FloatingButton } from "@/components/ui/FloatingButton";
 import { AppFooter } from "@/components/ui/AppFooter";
-import type { Jornada } from "@/lib/types";
+import { EditarDiaModal } from "@/components/modals/EditarDiaModal";
+import type { SavePayload } from "@/components/modals/EditarDiaModal";
+import type { Ganho, Jornada } from "@/lib/types";
 
 export default function MinhasJornadas() {
   const insets = useSafeAreaInsets();
   const { openDrawer, showModal, hideModal, showToast } = useUI();
   const { perfil } = useAuth();
   const [mes, setMes] = useState(new Date());
-  const { list, update, remove } = useJornadas(mes);
-
-  const [editing, setEditing] = useState<Jornada | null>(null);
-  const [edData, setEdData] = useState(new Date());
-  const [edHoras, setEdHoras] = useState("");
-  const [edMin, setEdMin] = useState("");
-  const [edKm, setEdKm] = useState("");
-
-  useEffect(() => {
-    if (!editing) return;
-    setEdData(dateEngine.parseISO(editing.data_jornada));
-    setEdHoras(String(editing.horas ?? 0));
-    setEdMin(String(editing.minutos ?? 0));
-    setEdKm(String(editing.km_percorrido_real ?? editing.km_percorrido ?? 0));
-  }, [editing?.id]);
+  const { list, update, remove, removeComGanhos } = useJornadas(mes);
+  const ganhosQuery = useGanhos(mes);
+  const { ativas: plataformasAtivas } = usePlataformas();
+  const [editandoJornada, setEditandoJornada] = useState<Jornada | null>(null);
 
   const assinante = perfil?.assinante === true;
   const hoje = new Date();
@@ -56,18 +46,18 @@ export default function MinhasJornadas() {
   const totalKm = (list.data ?? []).reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
   const totalMin = (list.data ?? []).reduce((s, j) => s + jornadaEngine.tempoTotalMinutos(j.horas ?? 0, j.minutos ?? 0), 0);
 
-  const confirmarRemover = (id: string) => {
+  const confirmarRemover = (jornada: Jornada) => {
     showModal({
       type: "confirm",
       title: "Remover jornada?",
-      message: "Esta ação não poderá ser desfeita.",
+      message: "Isso também removerá todos os ganhos registrados nesse dia.",
       confirmLabel: "Remover",
       cancelLabel: "Cancelar",
       onConfirm: async () => {
         hideModal();
         try {
-          await remove.mutateAsync(id);
-          showToast({ type: "success", message: "Jornada removida" });
+          await removeComGanhos.mutateAsync(jornada);
+          showToast({ type: "success", message: "Jornada e ganhos removidos" });
         } catch {
           showToast({ type: "error", message: "Erro ao remover" });
         }
@@ -76,31 +66,79 @@ export default function MinhasJornadas() {
     });
   };
 
-  const salvarEdicao = async () => {
-    if (!editing) return;
-    const h = parseInt(edHoras || "0", 10);
-    const m = parseInt(edMin || "0", 10);
-    const k = parseFloat((edKm || "0").replace(",", "."));
-    const v = jornadaEngine.validar({ horas: h, minutos: m, km: k });
-    if (!v.ok) {
-      showToast({ type: "error", message: v.erro ?? "Dados inválidos" });
-      return;
+  const ganhosPorData = useMemo(() => {
+    const map = new Map<string, Ganho[]>();
+    for (const g of ganhosQuery.list.data ?? []) {
+      if (!map.has(g.data_ganho)) map.set(g.data_ganho, []);
+      map.get(g.data_ganho)!.push(g);
     }
+    return map;
+  }, [ganhosQuery.list.data]);
+
+  const marcadores = useMemo(() => {
+    const dataCom = new Set((list.data ?? []).map((j) => j.data_jornada));
+    const hoje = dateEngine.hoje();
+    const resultado: { iso: string; cor: string }[] = [];
+    for (let i = 1; i <= 60; i++) {
+      const d = dateEngine.somarDias(hoje, -i);
+      const iso = dateEngine.formatarISO(d);
+      resultado.push({ iso, cor: dataCom.has(iso) ? theme.colors.success : "#EF4444" });
+    }
+    return resultado;
+  }, [list.data]);
+
+  const datasOcupadasJornadas = useMemo(
+    () =>
+      (list.data ?? [])
+        .map((j) => j.data_jornada)
+        .filter((d) => d !== (editandoJornada?.data_jornada ?? "")),
+    [list.data, editandoJornada],
+  );
+
+  const isSavingEdicao =
+    update.isPending ||
+    ganhosQuery.create.isPending ||
+    ganhosQuery.update.isPending ||
+    ganhosQuery.remove.isPending;
+
+  const handleSaveEdicao = async (payload: SavePayload) => {
+    if (!editandoJornada) return;
     try {
-      await update.mutateAsync({
-        id: editing.id,
-        patch: {
-          data_jornada: dateEngine.formatarISO(edData),
-          horas: h,
-          minutos: m,
-          km_percorrido: k,
-          km_percorrido_real: k,
-        },
-      });
+      if (payload.jornadaPatch) {
+        await update.mutateAsync({
+          id: editandoJornada.id,
+          patch: {
+            data_jornada: payload.novaDataISO,
+            horas: payload.jornadaPatch.horas,
+            minutos: payload.jornadaPatch.minutos,
+            km_percorrido: payload.jornadaPatch.km_percorrido,
+            km_percorrido_real: payload.jornadaPatch.km_percorrido_real,
+          },
+        });
+      }
+      for (const id of payload.ganhoDeletes) {
+        await ganhosQuery.remove.mutateAsync(id);
+      }
+      for (const g of payload.ganhoUpdates) {
+        await ganhosQuery.update.mutateAsync({
+          id: g.id,
+          patch: { data_ganho: g.data_ganho, plataforma_id: g.plataforma_id, valor: g.valor, corridas: g.corridas },
+        });
+      }
+      for (const g of payload.ganhoCreates) {
+        await ganhosQuery.create.mutateAsync({
+          jornada_id: editandoJornada.id,
+          plataforma_id: g.plataforma_id,
+          data_ganho: g.data_ganho,
+          valor: g.valor,
+          corridas: g.corridas,
+        });
+      }
       showToast({ type: "success", message: "Jornada atualizada" });
-      setEditing(null);
-    } catch {
-      showToast({ type: "error", message: "Erro ao salvar" });
+      setEditandoJornada(null);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Tente novamente";
+      showToast({ type: "error", message: msg });
     }
   };
 
@@ -143,10 +181,10 @@ export default function MinhasJornadas() {
                   <Text style={styles.cardTit}>{dateEngine.diaSemana(item.data_jornada)}</Text>
                   <Text style={styles.cardSub}>{jornadaEngine.formatarTempo(item)} · {Number(item.km_percorrido).toFixed(0)} km</Text>
                 </View>
-                <Pressable onPress={() => setEditing(item)} hitSlop={6} style={{ marginRight: 10 }}>
+                <Pressable onPress={() => setEditandoJornada(item)} hitSlop={6} style={{ marginRight: 10 }}>
                   <Ionicons name="create-outline" size={20} color={theme.colors.primary} />
                 </Pressable>
-                <Pressable onPress={() => confirmarRemover(item.id)} hitSlop={8}>
+                <Pressable onPress={() => confirmarRemover(item)} hitSlop={8}>
                   <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
                 </Pressable>
               </View>
@@ -156,30 +194,18 @@ export default function MinhasJornadas() {
       )}
       <FloatingButton icon="add" onPress={() => router.push("/(private)/registrar-jornada")} />
 
-      <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHead}>
-              <Text style={styles.modalTit}>Editar jornada</Text>
-              <Pressable onPress={() => setEditing(null)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={theme.colors.text} />
-              </Pressable>
-            </View>
-            <Text style={styles.label}>Data</Text>
-            <AppCalendar value={edData} onChange={setEdData} maxDate={dateEngine.hoje()} />
-            <View style={{ flexDirection: "row", marginTop: 8 }}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <AppInput label="Horas" keyboardType="numeric" value={edHoras} onChangeText={(t) => setEdHoras(t.replace(/\D/g, "").slice(0, 2))} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppInput label="Minutos" keyboardType="numeric" value={edMin} onChangeText={(t) => setEdMin(t.replace(/\D/g, "").slice(0, 2))} />
-              </View>
-            </View>
-            <AppInput label="Km percorrido" keyboardType="numeric" value={edKm} onChangeText={(t) => setEdKm(t.replace(/[^0-9.,]/g, ""))} />
-            <PrimaryButton label="Salvar alterações" icon="checkmark" onPress={salvarEdicao} loading={update.isPending} fullWidth size="lg" />
-          </View>
-        </View>
-      </Modal>
+      <EditarDiaModal
+        visible={!!editandoJornada}
+        onClose={() => setEditandoJornada(null)}
+        dataISO={editandoJornada?.data_jornada ?? ""}
+        jornada={editandoJornada}
+        ganhosDia={editandoJornada ? (ganhosPorData.get(editandoJornada.data_jornada) ?? []) : []}
+        datasOcupadas={datasOcupadasJornadas}
+        marcadores={marcadores}
+        plataformas={plataformasAtivas}
+        onSave={handleSaveEdicao}
+        isSaving={isSavingEdicao}
+      />
     </View>
   );
 }
