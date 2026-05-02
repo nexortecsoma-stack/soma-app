@@ -51,11 +51,11 @@ const CAMPOS: { id: CampoRanking; nome: string; lab: string }[] = [
 ];
 
 const PERIODOS: { id: RankingPeriodo; label: string }[] = [
+  { id: "todos",  label: "Tudo"   },
   { id: "dia",    label: "Dia"    },
   { id: "semana", label: "Semana" },
   { id: "mes",    label: "Mês"    },
   { id: "ano",    label: "Ano"    },
-  { id: "todos",  label: "Tudo"   },
 ];
 
 // ─── Helpers de período ───────────────────────────────────────────────────────
@@ -156,8 +156,8 @@ export default function CompartilharRankingScreen() {
 
   // ── Estado de filtros (inicializado pelos params da tela anterior) ──
   const [campo, setCampo]               = useState<CampoRanking>((cp ?? "ganho_liquido") as CampoRanking);
-  const [filtro, setFiltro]             = useState<RankingPeriodo>((fp ?? "mes") as RankingPeriodo);
-  const [refDate, setRefDate]           = useState<Date>(() => rdp ? new Date(rdp) : refInicial("mes"));
+  const [filtro, setFiltro]             = useState<RankingPeriodo>((fp ?? "todos") as RankingPeriodo);
+  const [refDate, setRefDate]           = useState<Date>(() => rdp ? new Date(rdp) : refInicial("todos"));
   const [uf, setUf]                     = useState<string | null>(null);
   const [categoria, setCategoria]       = useState<string | null>(null);
   const [tracao, setTracao]             = useState<string | null>(null);
