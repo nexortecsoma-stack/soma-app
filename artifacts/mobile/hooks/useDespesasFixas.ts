@@ -30,6 +30,12 @@ export function useDespesasFixas() {
         .map((j) => j.data_jornada)
         .sort()[0] ?? null;
 
+      // Km média mensal — média dos últimos 90 dias (3 meses)
+      const limite90Iso = dateEngine.formatarISO(dateEngine.somarDias(hoje, -90));
+      const jornadasRecentes = todasJornadas.filter((j) => j.data_jornada >= limite90Iso);
+      const kmRecentes = jornadasRecentes.reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
+      const kmMediaMensal = kmRecentes > 0 ? kmRecentes / 3 : 0;
+
       return despesaFixaEngine.calcular({
         perfil,
         veiculo,
@@ -38,6 +44,7 @@ export function useDespesasFixas() {
         diasTrabalhadosMes,
         totalJornadasMes: jornadasMes.length,
         kmMediaDiaria: diasTrabalhadosMes > 0 ? kmMes / diasTrabalhadosMes : 0,
+        kmMediaMensal,
         dataJornadaMaisAntiga: jornadaMaisAntiga,
         diasFolgaSemana: perfil?.dias_folga_semana ?? 2,
       });

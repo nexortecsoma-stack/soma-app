@@ -49,6 +49,7 @@ export interface CustoFixoInput {
   diasTrabalhadosMes: number;
   totalJornadasMes: number;
   kmMediaDiaria?: number;
+  kmMediaMensal?: number;
   dataJornadaMaisAntiga?: string | null;
   diasFolgaSemana?: number;
 }
@@ -93,6 +94,19 @@ function calcularIPVA(veiculo: Veiculo, aliquotas: IpvaAliquota[]): { valorAnual
 
 function fmtMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+const NOMES_MANUTENCAO: Record<string, string> = {
+  suspensao: "Suspensão e amortecedores",
+  pneus: "Jogo de pneus",
+  bateria: "Bateria",
+  oleo_filtros: "Troca de óleo e filtros",
+  freios: "Freios e pastilhas",
+  outros: "Manutenção diversa",
+};
+
+function nomeManutencao(tipo: string): string {
+  return NOMES_MANUTENCAO[tipo] ?? tipo.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 function fmtPct(v: number) {
   return (v * 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + "%";
@@ -311,27 +325,47 @@ export const despesaFixaEngine = {
         });
       }
 
-      // ── Manutenções ───────────────────────────────────────────────────────
+      // ── Manutenções (item por item) ────────────────────────────────────────
       if (considerarManut && input.manutencoes.length > 0) {
-        const valorDiario = manutencaoEngine.custoEstimadoDiario(input.manutencoes, input.kmMediaDiaria || 0);
-        const valorMensal = valorDiario * diasUteisMes;
-        const custoSoma = valorDiario * diasUteisDesdeInicio;
-        itens.push({
-          tipo: "manutencao",
-          descricao: "Manutenções básicas",
-          valorMensal,
-          valorDiario,
-          custoSoma,
-          ativo: true,
-          detalhamento: {
-            valorAnual: valorDiario * diasUteisAno,
-            diasUteisDesdeInicio,
-            termoInicial: termoInicialFmt,
-            termoFinal: "Média histórica",
-            formula: `Custo/km × ${fmtMoeda(input.kmMediaDiaria ?? 0)} km/dia = ${fmtMoeda(valorDiario)}/dia útil`,
-            observacao: `Baseado em ${input.manutencoes.length} manutenção(ões) registrada(s)`,
-          },
-        });
+        const kmMediaMensal = input.kmMediaMensal ?? ((input.kmMediaDiaria ?? 0) * 30);
+        const kmAtual = Number(input.veiculo?.km_atual ?? 0);
+        const ativas = manutencaoEngine.agrupar(input.manutencoes).filter((m) => m.ativo);
+        for (const m of ativas) {
+          const valor = Number(m.valor) || 0;
+          if (valor <= 0) continue;
+          const status = manutencaoEngine.status(m, kmAtual, kmMediaMensal);
+          if (status.rateioMensal <= 0) continue;
+          const valorMensal = status.rateioMensal;
+          const valorDiario = valorMensal / diasUteisMes;
+          const custoSoma = valorDiario * diasUteisDesdeInicio;
+          const termoInicial = `${fmtData(m.data_manutencao)}${m.km_troca != null ? ` · ${Number(m.km_troca).toLocaleString("pt-BR")} km` : ""}`;
+          const termoFinal = status.termoFinalEfetivoFmt ?? "Baseado em histórico";
+          const vidaUtil = status.vidaUtilMeses != null ? status.vidaUtilMeses.toFixed(1) : "?";
+          const fonteLabel = status.termoEfetivoFonte === "km" ? " (km)" : status.termoEfetivoFonte === "tempo" ? " (tempo)" : "";
+          const formula =
+            `${fmtMoeda(valor)} ÷ ${vidaUtil} meses de vida útil${fonteLabel}` +
+            ` = ${fmtMoeda(status.rateioMensal)}/mês · ${fmtMoeda(status.rateioDiario)}/dia`;
+          const obs: string[] = [];
+          if (status.dataPrevistaKmFmt) obs.push(`Prazo por km: ${status.dataPrevistaKmFmt}`);
+          if (status.termoFinalFmt) obs.push(`Prazo por tempo: ${status.termoFinalFmt}`);
+          if (status.kmFim) obs.push(`Km de substituição: ${Number(status.kmFim).toLocaleString("pt-BR")} km`);
+          itens.push({
+            tipo: "manutencao",
+            descricao: nomeManutencao(m.tipo_manutencao),
+            valorMensal,
+            valorDiario,
+            custoSoma,
+            ativo: true,
+            detalhamento: {
+              valorAnual: valorMensal * 12,
+              diasUteisDesdeInicio,
+              termoInicial,
+              termoFinal,
+              formula,
+              observacao: obs.length > 0 ? obs.join("\n") : undefined,
+            },
+          });
+        }
       }
 
       // ── Assinatura SOMA ───────────────────────────────────────────────────

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { useUI } from "@/hooks/UIContext";
 import { useManutencoes } from "@/hooks/useManutencoes";
+import { useJornadas } from "@/hooks/useJornadas";
 import { useAuth } from "@/hooks/AuthContext";
 import { useProtectedAction } from "@/hooks/useProtectedAction";
 import { TIPOS_MANUTENCAO } from "@/lib/constants";
@@ -24,12 +25,18 @@ import { AppProgressBar } from "@/components/ui/AppProgressBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AppFooter } from "@/components/ui/AppFooter";
 
+function fmtKm(km: number | null | undefined): string {
+  if (km == null) return "—";
+  return Number(km).toLocaleString("pt-BR") + " km";
+}
+
 export default function Manutencoes() {
   const insets = useSafeAreaInsets();
   const { veiculo } = useAuth();
   const { openDrawer, showModal, hideModal, showToast } = useUI();
   const protect = useProtectedAction();
   const { list, create, update, remove } = useManutencoes();
+  const { list: jornadasList } = useJornadas();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Manutencao | null>(null);
@@ -40,6 +47,16 @@ export default function Manutencoes() {
   const [duracaoKm, setDuracaoKm] = useState("");
   const [duracaoMes, setDuracaoMes] = useState("");
   const [obs, setObs] = useState("");
+
+  // Km média mensal dos últimos 90 dias
+  const kmMediaMensal = useMemo(() => {
+    const todas = jornadasList.data ?? [];
+    const hoje = dateEngine.hoje();
+    const limite90 = dateEngine.formatarISO(dateEngine.somarDias(hoje, -90));
+    const recentes = todas.filter((j) => j.data_jornada >= limite90);
+    const totalKm = recentes.reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
+    return totalKm > 0 ? totalKm / 3 : 0;
+  }, [jornadasList.data]);
 
   const abrirNovo = () => {
     setEditing(null);
@@ -141,7 +158,7 @@ export default function Manutencoes() {
             <Text style={styles.lab}>Data</Text>
             <AppCalendar value={data} onChange={setData} maxDate={dateEngine.hoje()} />
             <CurrencyInput label="Valor pago" value={valor} onChangeValue={setValor} />
-            <AppInput label="Km no momento" keyboardType="numeric" value={kmTroca} onChangeText={(t) => setKmTroca(t.replace(/[^0-9.,]/g, ""))} />
+            <AppInput label="Km no momento da troca" keyboardType="numeric" value={kmTroca} onChangeText={(t) => setKmTroca(t.replace(/[^0-9.,]/g, ""))} />
             <View style={{ flexDirection: "row" }}>
               <View style={{ flex: 1 }}>
                 <AppInput label="Duração (km)" keyboardType="numeric" value={duracaoKm} onChangeText={(t) => setDuracaoKm(t.replace(/[^0-9.,]/g, ""))} />
@@ -162,9 +179,10 @@ export default function Manutencoes() {
 
   const tipoMap = new Map<string, (typeof TIPOS_MANUTENCAO)[number]>(TIPOS_MANUTENCAO.map((t) => [t.id, t]));
   const res = manutencaoEngine.resumo(list.data ?? []);
+  const kmAtual = veiculo?.km_atual ?? 0;
 
   const renderItem = ({ item }: { item: ManutencaoComStatus }) => {
-    const status = manutencaoEngine.status(item, veiculo?.km_atual ?? 0);
+    const status = manutencaoEngine.status(item, kmAtual, kmMediaMensal);
     const substituido = !item.ativo;
     const cor = substituido
       ? theme.colors.textMuted
@@ -172,8 +190,12 @@ export default function Manutencoes() {
         : status.status === "atencao" ? theme.colors.warning
           : theme.colors.success;
 
+    const hasKm = item.duracao_km != null && item.km_troca != null;
+    const hasTempo = item.duracao_meses != null && item.duracao_meses > 0;
+
     return (
       <AppCard style={[{ marginBottom: 10 }, substituido ? styles.cardSubst : {}]}>
+        {/* Título + ações */}
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <View style={styles.titRow}>
@@ -189,6 +211,7 @@ export default function Manutencoes() {
             </View>
             <Text style={[styles.sub, substituido && styles.textMuted]}>
               {dateEngine.formatarBR(item.data_manutencao)} · {currencyEngine.formatar(Number(item.valor))}
+              {item.km_troca != null ? ` · ${fmtKm(item.km_troca)} na troca` : ""}
             </Text>
           </View>
           <Pressable onPress={() => abrirEdicao(item)} hitSlop={6} style={{ marginRight: 8 }}>
@@ -199,32 +222,102 @@ export default function Manutencoes() {
           </Pressable>
         </View>
 
+        {/* Detalhes de prazo (somente ativos) */}
         {!substituido && (
           <>
+            {/* Termos */}
+            <View style={styles.termosGrid}>
+              {/* Prazo por km */}
+              {hasKm && (
+                <View style={[
+                  styles.termoBloco,
+                  status.termoEfetivoFonte === "km" && styles.termoBlocoDestaque,
+                ]}>
+                  <View style={styles.termoBlocoHeader}>
+                    <Ionicons name="speedometer-outline" size={12} color={status.termoEfetivoFonte === "km" ? theme.colors.primary : theme.colors.textMuted} />
+                    <Text style={[styles.termoBlocoTit, status.termoEfetivoFonte === "km" && { color: theme.colors.primary }]}>Prazo por km</Text>
+                    {status.termoEfetivoFonte === "km" && (
+                      <View style={styles.efetivoBadge}>
+                        <Text style={styles.efetivoBadgeTxt}>efetivo</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.termoData}>
+                    {status.dataPrevistaKmFmt ?? (kmMediaMensal > 0 ? "—" : "sem média km")}
+                  </Text>
+                  <Text style={styles.termoDetalhe}>
+                    {fmtKm(item.km_troca)} → {fmtKm(status.kmFim)}
+                  </Text>
+                  {status.kmRestantes != null && (
+                    <Text style={styles.termoDetalhe}>
+                      restam {fmtKm(status.kmRestantes)}
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {/* Prazo por tempo */}
+              {hasTempo && (
+                <View style={[
+                  styles.termoBloco,
+                  status.termoEfetivoFonte === "tempo" && styles.termoBlocoDestaque,
+                ]}>
+                  <View style={styles.termoBlocoHeader}>
+                    <Ionicons name="calendar-outline" size={12} color={status.termoEfetivoFonte === "tempo" ? theme.colors.primary : theme.colors.textMuted} />
+                    <Text style={[styles.termoBlocoTit, status.termoEfetivoFonte === "tempo" && { color: theme.colors.primary }]}>Prazo por tempo</Text>
+                    {status.termoEfetivoFonte === "tempo" && (
+                      <View style={styles.efetivoBadge}>
+                        <Text style={styles.efetivoBadgeTxt}>efetivo</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.termoData}>{status.termoFinalFmt ?? "—"}</Text>
+                  <Text style={styles.termoDetalhe}>{item.duracao_meses} meses</Text>
+                  {status.diasRestantes != null && (
+                    <Text style={styles.termoDetalhe}>restam {status.diasRestantes} dias</Text>
+                  )}
+                </View>
+              )}
+
+              {/* Se não tem nenhum prazo */}
+              {!hasKm && !hasTempo && (
+                <View style={[styles.termoBloco, { flex: 1 }]}>
+                  <Text style={styles.termoDetalhe}>Sem prazo definido</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Barra de progresso */}
             <AppProgressBar
               percentual={status.vidaUtilPercentual}
               rightLabel={`${status.vidaUtilPercentual}% usado`}
               cor={[cor, cor]}
               style={{ marginTop: 10 }}
             />
-            <View style={styles.bottomRow}>
-              {(status.diasRestantes != null || status.kmRestantes != null) && (
-                <Text style={styles.rest}>
-                  {status.diasRestantes != null ? `${status.diasRestantes} dias` : ""}
-                  {status.diasRestantes != null && status.kmRestantes != null ? " · " : ""}
-                  {status.kmRestantes != null ? `${status.kmRestantes.toFixed(0)} km restantes` : ""}
+
+            {/* Rateio */}
+            {status.rateioMensal > 0 && (
+              <View style={styles.rateioRow}>
+                <Ionicons name="calculator-outline" size={13} color={theme.colors.primary} />
+                <Text style={styles.rateioTxt}>
+                  Rateio:{" "}
+                  <Text style={styles.rateioVal}>{currencyEngine.formatar(status.rateioMensal)}/mês</Text>
+                  {"  ·  "}
+                  <Text style={styles.rateioVal}>{currencyEngine.formatar(status.rateioDiario)}/dia</Text>
                 </Text>
-              )}
-              {item.termoFinalFmt && (
-                <Text style={styles.termoFinal}>
-                  <Ionicons name="flag-outline" size={10} /> até {item.termoFinalFmt}
-                </Text>
-              )}
-            </View>
+                {status.vidaUtilMeses != null && (
+                  <Text style={styles.rateioMeses}>
+                    ({status.vidaUtilMeses.toFixed(1)} meses)
+                  </Text>
+                )}
+              </View>
+            )}
           </>
         )}
+
+        {/* Substituído: mostra apenas vencimento */}
         {substituido && item.termoFinalFmt && (
-          <Text style={[styles.rest, { marginTop: 4 }]}>Venceu em {item.termoFinalFmt}</Text>
+          <Text style={[styles.sub, { marginTop: 4 }]}>Venceu em {item.termoFinalFmt}</Text>
         )}
       </AppCard>
     );
@@ -232,7 +325,7 @@ export default function Manutencoes() {
 
   return (
     <View style={{ flex: 1 }}>
-      <AppHeader title="Manutenções" subtitle="Acompanhe a vida útil" onMenuPress={openDrawer} />
+      <AppHeader title="Manutenções" subtitle="Vida útil e previsões" onMenuPress={openDrawer} />
       {list.isLoading ? (
         <View style={{ padding: 40 }}><ActivityIndicator color={theme.colors.primary} /></View>
       ) : (
@@ -245,22 +338,27 @@ export default function Manutencoes() {
           ListHeaderComponent={
             res.itens.length > 0 ? (
               <View style={styles.summaryCard}>
-                <View style={styles.summaryLeft}>
-                  <Ionicons name="construct" size={22} color={theme.colors.primary} />
-                  <View style={{ marginLeft: 12 }}>
-                    <Text style={styles.summaryLabel}>Total investido (itens ativos)</Text>
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryBlock}>
+                    <Ionicons name="construct" size={18} color={theme.colors.primary} style={{ marginBottom: 4 }} />
+                    <Text style={styles.summaryLabel}>Total investido (ativos)</Text>
                     <Text style={styles.summaryValor}>{currencyEngine.formatar(res.totalCustoAtivo)}</Text>
                     <Text style={styles.summaryMeta}>
                       {res.totalItensAtivos} ativo(s) · {res.totalItensSubstituidos} substituído(s)
                     </Text>
                   </View>
-                </View>
-                {res.termoFinalGlobalFmt && (
-                  <View style={styles.termoBox}>
-                    <Text style={styles.termoLabel}>Próx. vencimento</Text>
-                    <Text style={styles.termoVal}>{res.termoFinalGlobalFmt}</Text>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryBlock}>
+                    <Ionicons name="speedometer-outline" size={18} color={theme.colors.primary} style={{ marginBottom: 4 }} />
+                    <Text style={styles.summaryLabel}>Média km/mês</Text>
+                    <Text style={styles.summaryValor}>
+                      {kmMediaMensal > 0
+                        ? Math.round(kmMediaMensal).toLocaleString("pt-BR") + " km"
+                        : "sem dados"}
+                    </Text>
+                    <Text style={styles.summaryMeta}>base dos últimos 90 dias</Text>
                   </View>
-                )}
+                </View>
               </View>
             ) : null
           }
@@ -280,37 +378,60 @@ const styles = StyleSheet.create({
   titRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   tit: { ...theme.font.semibold, fontSize: 14, color: theme.colors.text },
   textMuted: { color: theme.colors.textMuted },
-  sub: { ...theme.font.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
-  bottomRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 },
-  rest: { fontSize: 11, color: theme.colors.textMuted, ...theme.font.medium },
-  termoFinal: { fontSize: 11, color: theme.colors.primary, ...theme.font.semibold },
-  cardSubst: { opacity: 0.65 },
+  sub: { ...theme.font.regular, fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
+  cardSubst: { opacity: 0.6 },
   badgeSubst: {
     flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
   },
   badgeTxt: { fontSize: 9, color: theme.colors.textMuted, ...theme.font.semibold, textTransform: "uppercase" },
-  // Card de resumo no topo
+
+  // Termos
+  termosGrid: { flexDirection: "row", gap: 8, marginTop: 10 },
+  termoBloco: {
+    flex: 1, backgroundColor: theme.colors.surfaceMuted,
+    borderRadius: theme.radius.md, padding: 8,
+    borderWidth: 1, borderColor: theme.colors.divider,
+  },
+  termoBlocoDestaque: {
+    backgroundColor: theme.colors.primary + "0F",
+    borderColor: theme.colors.primary + "40",
+  },
+  termoBlocoHeader: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 },
+  termoBlocoTit: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.semibold, textTransform: "uppercase", flex: 1 },
+  efetivoBadge: {
+    backgroundColor: theme.colors.primary + "20",
+    borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1,
+  },
+  efetivoBadgeTxt: { fontSize: 8, color: theme.colors.primary, ...theme.font.bold, textTransform: "uppercase" },
+  termoData: { ...theme.font.bold, fontSize: 13, color: theme.colors.text, marginBottom: 2 },
+  termoDetalhe: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.regular, marginTop: 1 },
+
+  // Rateio
+  rateioRow: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8,
+    backgroundColor: theme.colors.primary + "0A",
+    borderRadius: theme.radius.md, padding: 8,
+  },
+  rateioTxt: { fontSize: 12, color: theme.colors.textMuted, ...theme.font.regular, flex: 1 },
+  rateioVal: { ...theme.font.semibold, color: theme.colors.text },
+  rateioMeses: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.regular },
+
+  // Cabeçalho resumo
   summaryCard: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     backgroundColor: theme.colors.primary + "12",
     borderRadius: theme.radius.lg, padding: 14, marginBottom: 14,
     borderWidth: 1.5, borderColor: theme.colors.primary + "25",
     ...theme.shadow.soft,
   },
-  summaryLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  summaryRow: { flexDirection: "row", alignItems: "stretch" },
+  summaryBlock: { flex: 1, alignItems: "flex-start" },
+  summaryDivider: { width: 1, backgroundColor: theme.colors.divider, marginHorizontal: 14 },
   summaryLabel: { ...theme.font.medium, fontSize: 11, color: theme.colors.textMuted },
-  summaryValor: { ...theme.font.bold, fontSize: 20, color: theme.colors.text, marginTop: 1 },
+  summaryValor: { ...theme.font.bold, fontSize: 18, color: theme.colors.text, marginTop: 2 },
   summaryMeta: { ...theme.font.regular, fontSize: 10, color: theme.colors.textMuted, marginTop: 2 },
-  termoBox: {
-    alignItems: "flex-end", padding: 10,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md, marginLeft: 8,
-    borderWidth: 1, borderColor: theme.colors.divider,
-  },
-  termoLabel: { fontSize: 9, color: theme.colors.textMuted, ...theme.font.semibold, textTransform: "uppercase" },
-  termoVal: { fontSize: 13, color: theme.colors.primary, ...theme.font.bold, marginTop: 2 },
+
   fab: {
     position: "absolute", right: 22, bottom: 28,
     width: 60, height: 60, borderRadius: 30, backgroundColor: theme.colors.primary,
