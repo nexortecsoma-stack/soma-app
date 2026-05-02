@@ -2,6 +2,37 @@ import type { Ganho, Jornada, Perfil, RankingSoma, Veiculo } from "@/lib/types";
 
 export type CampoRanking = "ganho_bruto" | "ganho_liquido" | "ganho_por_hora" | "ganho_por_km";
 
+export type RankingPeriodo = "dia" | "semana" | "mes" | "ano" | "todos";
+
+export function periodoParaDatas(filtro: RankingPeriodo, refDate: Date): { inicio: Date; fim: Date } {
+  const base = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
+  if (filtro === "dia") {
+    return { inicio: base, fim: new Date(base.getFullYear(), base.getMonth(), base.getDate() + 1) };
+  }
+  if (filtro === "semana") {
+    const day = (base.getDay() + 6) % 7;
+    const ini = new Date(base);
+    ini.setDate(base.getDate() - day);
+    const fim = new Date(ini);
+    fim.setDate(ini.getDate() + 7);
+    return { inicio: ini, fim };
+  }
+  if (filtro === "mes") {
+    return {
+      inicio: new Date(base.getFullYear(), base.getMonth(), 1),
+      fim: new Date(base.getFullYear(), base.getMonth() + 1, 1),
+    };
+  }
+  if (filtro === "ano") {
+    return {
+      inicio: new Date(base.getFullYear(), 0, 1),
+      fim: new Date(base.getFullYear() + 1, 0, 1),
+    };
+  }
+  // todos
+  return { inicio: new Date(2020, 0, 1), fim: new Date() };
+}
+
 export interface FiltrosRanking {
   cidade?: string | null;
   uf?: string | null;
