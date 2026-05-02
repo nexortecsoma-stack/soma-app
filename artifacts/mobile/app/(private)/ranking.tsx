@@ -281,6 +281,28 @@ export default function RankingScreen() {
     base = rankingEngine.filtrar(base, {
       uf, categoria, tipo_tracao: tracao, tipo_propriedade: propriedade,
     });
+
+    // Para hora e km, ordena pelo valor calculado ao vivo (bruto/horas e bruto/km)
+    // para garantir que posição exibida e valor exibido sejam sempre consistentes
+    if (campo === "ganho_por_hora") {
+      return [...base].sort((a, b) => {
+        const aH = Number(a.horas_trabalhadas || 0);
+        const bH = Number(b.horas_trabalhadas || 0);
+        const aV = aH > 0 ? Number(a.ganho_bruto || 0) / aH : 0;
+        const bV = bH > 0 ? Number(b.ganho_bruto || 0) / bH : 0;
+        return bV - aV;
+      });
+    }
+    if (campo === "ganho_por_km") {
+      return [...base].sort((a, b) => {
+        const aK = Number(a.km_percorrido || 0);
+        const bK = Number(b.km_percorrido || 0);
+        const aV = aK > 0 ? Number(a.ganho_bruto || 0) / aK : 0;
+        const bV = bK > 0 ? Number(b.ganho_bruto || 0) / bK : 0;
+        return bV - aV;
+      });
+    }
+
     return rankingEngine.ordenar(base, campo);
   }, [list.data, filtro, refDate, uf, categoria, tracao, propriedade, campo]);
 
