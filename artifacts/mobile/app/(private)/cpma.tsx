@@ -363,17 +363,12 @@ export default function CPMAScreen() {
                 color={theme.colors.primary}
               />
               <MiniCard
-                icon="calendar"
-                label="Jornadas"
-                value={String(data.jornadasCount)}
-                color={theme.colors.accent}
-              />
-              <MiniCard
                 icon="sunny"
                 label="Dias Trab."
                 value={String(data.diasTrabalhados)}
                 color={theme.colors.success}
               />
+              <View style={mini.cardEmpty} />
             </View>
             <View style={styles.grid}>
               <MiniCard
@@ -389,20 +384,25 @@ export default function CPMAScreen() {
                 color={theme.colors.primary}
               />
               <MiniCard
+                icon="trending-down"
+                label="Custo / hora"
+                value={data.custoPorHora > 0 ? fmt(data.custoPorHora) : "—"}
+                color={theme.colors.danger}
+              />
+            </View>
+            <View style={styles.grid}>
+              <MiniCard
                 icon="cash-outline"
                 label="Ganho / corrida"
                 value={data.ganhoPorCorrida > 0 ? fmt(data.ganhoPorCorrida) : "—"}
                 color={theme.colors.success}
               />
-            </View>
-            <View style={styles.grid}>
               <MiniCard
                 icon="speedometer-outline"
                 label="KM / corrida"
                 value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"}
                 color={theme.colors.accent}
               />
-              <View style={mini.cardEmpty} />
               <View style={mini.cardEmpty} />
             </View>
 

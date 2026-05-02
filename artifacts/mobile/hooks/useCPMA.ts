@@ -30,11 +30,11 @@ export interface CPMAData {
 
   // Corridas e jornadas
   corridas: number;
-  jornadasCount: number;
   diasTrabalhados: number;
   horas: number;
   corridasPorHora: number;
   ganhoPorHora: number;
+  custoPorHora: number;
   ganhoPorCorrida: number;
   kmPorCorrida: number;
 
@@ -175,11 +175,11 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         kmPessoal,
 
         corridas,
-        jornadasCount,
         diasTrabalhados,
         horas,
         corridasPorHora: horas > 0 ? corridas / horas : 0,
         ganhoPorHora: horas > 0 ? ganhoBruto / horas : 0,
+        custoPorHora: horas > 0 ? totalCustos / horas : 0,
         ganhoPorCorrida: corridas > 0 ? ganhoBruto / corridas : 0,
         kmPorCorrida: corridas > 0 ? kmTrabalho / corridas : 0,
 
