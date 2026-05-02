@@ -123,17 +123,14 @@ function RankingCard({
   const horas        = Number(item.horas_trabalhadas || 0);
   const km           = Number(item.km_percorrido || 0);
 
-  const usandoBrutoHora = ganhoLiquido < 0 || Number(item.ganho_por_hora || 0) < 0;
-  const usandoBrutoKm   = ganhoLiquido < 0 || Number(item.ganho_por_km   || 0) < 0;
-
-  const valorPorHora = usandoBrutoHora ? (horas > 0 ? ganhoBruto / horas : 0) : Number(item.ganho_por_hora || 0);
-  const valorPorKm   = usandoBrutoKm   ? (km   > 0 ? ganhoBruto / km   : 0) : Number(item.ganho_por_km   || 0);
+  const valorPorHora = horas > 0 ? ganhoBruto / horas : 0;
+  const valorPorKm   = km   > 0 ? ganhoBruto / km   : 0;
 
   const stats = [
     { lab: "Bruto",   val: ganhoBruto,   id: "ganho_bruto"    as CampoRanking, sub: null },
     { lab: "Líquido", val: ganhoLiquido, id: "ganho_liquido"  as CampoRanking, sub: null },
-    { lab: "R$/hora", val: valorPorHora, id: "ganho_por_hora" as CampoRanking, sub: usandoBrutoHora ? "bruto" : null },
-    { lab: "R$/km",   val: valorPorKm,   id: "ganho_por_km"   as CampoRanking, sub: usandoBrutoKm   ? "bruto" : null },
+    { lab: "R$/hora", val: valorPorHora, id: "ganho_por_hora" as CampoRanking, sub: "bruto" },
+    { lab: "R$/km",   val: valorPorKm,   id: "ganho_por_km"   as CampoRanking, sub: "bruto" },
   ];
 
   const valorPrincipal =

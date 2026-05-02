@@ -68,10 +68,8 @@ export const rankingEngine = {
       (s, j) => s + Number(j.km_percorrido_real || j.km_percorrido || 0),
       0,
     );
-    const baseHora = ganhoLiquido >= 0 ? ganhoLiquido : ganhoBruto;
-    const baseKm   = ganhoLiquido >= 0 ? ganhoLiquido : ganhoBruto;
-    const ganhoPorHora = horas > 0 ? Math.max(0, baseHora / horas) : 0;
-    const ganhoPorKm   = km   > 0 ? Math.max(0, baseKm   / km)   : 0;
+    const ganhoPorHora = horas > 0 ? Math.max(0, ganhoBruto / horas) : 0;
+    const ganhoPorKm   = km   > 0 ? Math.max(0, ganhoBruto / km)   : 0;
     return {
       profile_id: perfil.id,
       nome_publico: perfil.nome_publico ?? perfil.nome ?? null,
