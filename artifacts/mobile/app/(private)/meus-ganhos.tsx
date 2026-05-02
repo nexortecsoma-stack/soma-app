@@ -121,6 +121,7 @@ export default function MeusGanhos() {
   const mesKey = `${mes.getFullYear()}-${mes.getMonth()}`;
 
   const { list, create, update, remove } = useGanhos(mes);
+  const { list: todosGanhos } = useGanhos();
   const queryClient = useQueryClient();
   const [expandido, setExpandido] = useState<string | null>(null);
   const [editandoData, setEditandoData] = useState<string | null>(null);
@@ -252,16 +253,23 @@ export default function MeusGanhos() {
   const ganhosDoDiaEditando = editandoData ? (ganhosPorData.get(editandoData) ?? []) : [];
 
   const marcadoresGanhos = useMemo(() => {
-    const datasComGanho = new Set(Array.from(ganhosPorData.keys()));
+    const datasComGanho = new Set((todosGanhos.data ?? []).map((g) => g.data_ganho));
     const hoje = dateEngine.hoje();
+    const hojeISO = dateEngine.formatarISO(hoje);
     const resultado: { iso: string; cor: string }[] = [];
     for (let i = 1; i <= 60; i++) {
       const d = dateEngine.somarDias(hoje, -i);
       const iso = dateEngine.formatarISO(d);
+      if (iso > hojeISO) continue;
       resultado.push({ iso, cor: datasComGanho.has(iso) ? theme.colors.success : "#EF4444" });
     }
+    for (const iso of datasComGanho) {
+      if (!resultado.find((m) => m.iso === iso)) {
+        resultado.push({ iso, cor: theme.colors.success });
+      }
+    }
     return resultado;
-  }, [ganhosPorData]);
+  }, [todosGanhos.data]);
 
   const datasOcupadasGanhos = useMemo(
     () => Array.from(ganhosPorData.keys()).filter((d) => d !== editandoData),

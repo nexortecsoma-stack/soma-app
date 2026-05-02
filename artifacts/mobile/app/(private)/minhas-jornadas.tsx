@@ -26,6 +26,7 @@ export default function MinhasJornadas() {
   const { perfil } = useAuth();
   const [mes, setMes] = useState(new Date());
   const { list, update, remove, removeComGanhos } = useJornadas(mes);
+  const { list: todasJornadas } = useJornadas();
   const ganhosQuery = useGanhos(mes);
   const { ativas: plataformasAtivas } = usePlataformas();
   const [editandoJornada, setEditandoJornada] = useState<Jornada | null>(null);
@@ -76,16 +77,23 @@ export default function MinhasJornadas() {
   }, [ganhosQuery.list.data]);
 
   const marcadores = useMemo(() => {
-    const dataCom = new Set((list.data ?? []).map((j) => j.data_jornada));
+    const dataCom = new Set((todasJornadas.data ?? []).map((j) => j.data_jornada));
     const hoje = dateEngine.hoje();
+    const hojeISO = dateEngine.formatarISO(hoje);
     const resultado: { iso: string; cor: string }[] = [];
     for (let i = 1; i <= 60; i++) {
       const d = dateEngine.somarDias(hoje, -i);
       const iso = dateEngine.formatarISO(d);
+      if (iso > hojeISO) continue;
       resultado.push({ iso, cor: dataCom.has(iso) ? theme.colors.success : "#EF4444" });
     }
+    for (const iso of dataCom) {
+      if (!resultado.find((m) => m.iso === iso)) {
+        resultado.push({ iso, cor: theme.colors.success });
+      }
+    }
     return resultado;
-  }, [list.data]);
+  }, [todasJornadas.data]);
 
   const datasOcupadasJornadas = useMemo(
     () =>
