@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthContext";
 import { jornadaService } from "@/services/jornada-service";
 import { ganhosService } from "@/services/ganhos-service";
+import { abastecimentosService } from "@/services/abastecimentos-service";
 import { pontosJornadaService } from "@/services/pontos-jornada-service";
 import { jornadaEngine } from "@/engines/jornada-engine";
 import { dateEngine } from "@/engines/date-engine";
@@ -83,15 +84,19 @@ export function useJornadas(mes?: Date) {
     onSuccess: invalidar,
   });
 
-  /** Remove jornada e todos os ganhos do mesmo dia */
+  /** Remove jornada, todos os ganhos e os abastecimentos do mesmo dia */
   const removeComGanhos = useMutation({
     mutationFn: async (jornada: Jornada) => {
-      if (userId) await ganhosService.removeByDate(userId, jornada.data_jornada);
+      if (userId) {
+        await ganhosService.removeByDate(userId, jornada.data_jornada);
+        await abastecimentosService.removeByDate(userId, jornada.data_jornada);
+      }
       await jornadaService.remove(jornada.id);
     },
     onSuccess: () => {
       invalidar();
       queryClient.invalidateQueries({ queryKey: ["ganhos"] });
+      queryClient.invalidateQueries({ queryKey: ["abastecimentos"] });
     },
   });
 

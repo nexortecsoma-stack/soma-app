@@ -65,4 +65,13 @@ export const abastecimentosService = {
     const { error } = await supabase.from("abastecimentos").delete().eq("id", id);
     if (error) throw error;
   },
+
+  async removeByDate(profileId: string, date: string) {
+    const { error } = await supabase
+      .from("abastecimentos")
+      .delete()
+      .eq("profile_id", profileId)
+      .eq("data_abastecimento", date);
+    if (error) throw error;
+  },
 };

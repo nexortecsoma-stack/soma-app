@@ -51,7 +51,7 @@ export default function MinhasJornadas() {
     showModal({
       type: "confirm",
       title: "Remover jornada?",
-      message: "Isso também removerá todos os ganhos registrados nesse dia.",
+      message: "Isso também removerá todos os ganhos e os abastecimentos registrados nesse dia.",
       confirmLabel: "Remover",
       cancelLabel: "Cancelar",
       onConfirm: async () => {

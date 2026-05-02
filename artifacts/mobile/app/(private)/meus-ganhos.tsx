@@ -19,6 +19,7 @@ import { despesaFixaEngine } from "@/engines/despesa-fixa-engine";
 import { CATEGORIAS_DESPESA } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
 import { jornadaService } from "@/services/jornada-service";
+import { abastecimentosService } from "@/services/abastecimentos-service";
 import { useUI } from "@/hooks/UIContext";
 import { useGanhos } from "@/hooks/useGanhos";
 import { useAuth } from "@/hooks/AuthContext";
@@ -207,14 +208,19 @@ export default function MeusGanhos() {
       type: "confirm",
       title: "Remover ganho?",
       message: isUltimo
-        ? "Isso também removerá a jornada do dia, pois não haverá mais ganhos registrados."
-        : "Esta ação não pode ser desfeita.",
+        ? "Isso também removerá a jornada do dia e os abastecimentos registrados nessa data."
+        : "Isso também removerá os abastecimentos registrados nessa data.",
       confirmLabel: "Remover",
       cancelLabel: "Cancelar",
       onConfirm: async () => {
         hideModal();
         try {
           await remove.mutateAsync(g.id);
+          // Remove sempre os abastecimentos daquela data
+          if (userId) {
+            await abastecimentosService.removeByDate(userId, g.data_ganho);
+            queryClient.invalidateQueries({ queryKey: ["abastecimentos"] });
+          }
           if (isUltimo) {
             const jornadaDoDia = suplemento.data?.jornadas.find(
               (j) => j.data_jornada === g.data_ganho,
