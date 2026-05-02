@@ -49,6 +49,15 @@ export default function RegistrarJornada() {
 
   void session;
 
+  // Pré-preenche a plataforma da primeira entrada assim que a lista carrega
+  useEffect(() => {
+    const primeiraId = plataformasAtivas.find((p) => p.id !== null)?.id ?? null;
+    if (!primeiraId) return;
+    setGanhos((prev) =>
+      prev.map((g, i) => (i === 0 && g.plataformaId === null ? { ...g, plataformaId: primeiraId } : g)),
+    );
+  }, [plataformasAtivas]);
+
   // Pré-preenche a partir dos parâmetros enviados pelo Histórico GPS
   // Reage a mudanças de params para funcionar mesmo quando a tela já está na pilha
   useEffect(() => {
@@ -150,7 +159,7 @@ export default function RegistrarJornada() {
         setHoras("");
         setMinutos("");
         setKm("");
-        setGanhos([novaEntry()]);
+        setGanhos([{ ...novaEntry(), plataformaId: plataformasAtivas.find((p) => p.id !== null)?.id ?? null }]);
         router.back();
       } catch (e: any) {
         const msg = e?.message ?? String(e) ?? "Erro desconhecido";
@@ -264,7 +273,11 @@ export default function RegistrarJornada() {
           ))}
           <Pressable
             style={styles.addPlatBtn}
-            onPress={() => setGanhos((g) => [...g, novaEntry()])}
+            onPress={() => {
+              const selecionadas = new Set(ganhos.filter((g) => g.plataformaId).map((g) => g.plataformaId!));
+              const primeiraLivre = todasPlatOptions.find((o) => !selecionadas.has(o.value))?.value ?? null;
+              setGanhos((prev) => [...prev, { ...novaEntry(), plataformaId: primeiraLivre }]);
+            }}
           >
             <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} />
             <Text style={styles.addPlatTxt}>Adicionar plataforma</Text>

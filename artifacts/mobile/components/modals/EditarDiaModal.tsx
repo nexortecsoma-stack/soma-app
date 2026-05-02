@@ -111,6 +111,7 @@ export function EditarDiaModal({
       setEdKm("");
     }
 
+    const primeiraPlat = plataformas.find((p) => p.id !== null)?.id ?? null;
     setEdEntries(
       ganhosDia.length > 0
         ? ganhosDia.map((g) => ({
@@ -120,7 +121,7 @@ export function EditarDiaModal({
             valor: Number(g.valor) || 0,
             corridas: g.corridas != null ? String(g.corridas) : "",
           }))
-        : [novaEdEntry()],
+        : [{ ...novaEdEntry(), plataformaId: primeiraPlat }],
     );
   }, [visible, dataISO]);
 
@@ -345,7 +346,11 @@ export function EditarDiaModal({
 
             <Pressable
               style={s.addPlatBtn}
-              onPress={() => setEdEntries((prev) => [...prev, novaEdEntry()])}
+              onPress={() => {
+                const selecionadas = new Set(edEntries.filter((e) => e.plataformaId).map((e) => e.plataformaId!));
+                const primeiraLivre = todasPlatOptions.find((o) => !selecionadas.has(o.value))?.value ?? null;
+                setEdEntries((prev) => [...prev, { ...novaEdEntry(), plataformaId: primeiraLivre }]);
+              }}
             >
               <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} />
               <Text style={s.addPlatTxt}>Adicionar plataforma</Text>
