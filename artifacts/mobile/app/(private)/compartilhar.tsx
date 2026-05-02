@@ -249,7 +249,7 @@ export default function CompartilharScreen() {
           {/* Cabeçalho */}
           <View style={styles.imgHeader}>
             <Image
-              source={require("../../assets/images/app-logo.png")}
+              source={require("../../assets/images/icon.png")}
               style={styles.imgLogo}
             />
             <View style={{ flex: 1 }}>
@@ -275,13 +275,130 @@ export default function CompartilharScreen() {
 
           <View style={styles.divider} />
 
-          {/* Mini cards */}
+          {/* Conteúdo */}
           {loading || !data ? (
             <View style={{ paddingVertical: 40, alignItems: "center" }}>
               <ActivityIndicator color={theme.colors.accentBright} />
               <Text style={[styles.driverCity, { marginTop: 8 }]}>Carregando…</Text>
             </View>
+          ) : modoGanho ? (
+            /* ── Modo jornada do dia ── */
+            <>
+              {/* KPIs principais */}
+              <View style={styles.kpiRow}>
+                <View style={styles.kpiBlock}>
+                  <Text style={styles.kpiLabel}>Ganho Bruto</Text>
+                  <Text style={styles.kpiValue}>{fmt(data.ganhoBruto)}</Text>
+                </View>
+                <View style={styles.kpiSep} />
+                <View style={styles.kpiBlock}>
+                  <Text style={styles.kpiLabel}>Ganho Líquido</Text>
+                  <Text style={[styles.kpiValue, { color: theme.colors.accentBright }]}>{fmt(data.ganhoLiquido)}</Text>
+                  {data.pctLiquido > 0 && <Text style={styles.kpiPct}>{data.pctLiquido}% do bruto</Text>}
+                </View>
+                <View style={styles.kpiSep} />
+                <View style={styles.kpiBlock}>
+                  <Text style={styles.kpiLabel}>Ganho Real</Text>
+                  <Text style={[styles.kpiValue, { color: data.ganhoReal >= 0 ? theme.colors.success : theme.colors.danger }]}>{fmt(data.ganhoReal)}</Text>
+                  {data.pctReal !== 0 && <Text style={styles.kpiPct}>{data.pctReal}% do bruto</Text>}
+                </View>
+              </View>
+
+              {/* Atividade do dia */}
+              <View style={styles.atividadeRow}>
+                {data.corridas > 0 && (
+                  <View style={styles.atividadeItem}>
+                    <Ionicons name="navigate" size={13} color="rgba(255,255,255,0.6)" />
+                    <Text style={styles.atividadeTxt}>{data.corridas} corridas</Text>
+                  </View>
+                )}
+                {data.kmTrabalho > 0 && (
+                  <View style={styles.atividadeItem}>
+                    <Ionicons name="car" size={13} color="rgba(255,255,255,0.6)" />
+                    <Text style={styles.atividadeTxt}>{fmtKm(data.kmTrabalho)}</Text>
+                  </View>
+                )}
+                {data.horas > 0 && (
+                  <View style={styles.atividadeItem}>
+                    <Ionicons name="time" size={13} color="rgba(255,255,255,0.6)" />
+                    <Text style={styles.atividadeTxt}>{fmtH(data.horas)}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Breakdown Ganho Líquido */}
+              <SecLabel>Ganho Líquido</SecLabel>
+              <View style={styles.bdRow}>
+                <Text style={styles.bdLbl}>Ganho bruto</Text>
+                <Text style={styles.bdVal}>{fmt(data.ganhoBruto)}</Text>
+              </View>
+              {data.despesasItems.map((item) => (
+                <View key={item.nome} style={styles.bdRow}>
+                  <Text style={styles.bdLbl}>{item.nome}</Text>
+                  <Text style={[styles.bdVal, { color: theme.colors.danger }]}>- {fmt(item.valor)}</Text>
+                </View>
+              ))}
+              {data.custoCombustivel > 0 && (
+                <View style={styles.bdRow}>
+                  <Text style={styles.bdLbl}>
+                    Combustível{data.kmTrabalho > 0 ? ` (${Math.round(data.kmTrabalho)} km)` : ""}
+                  </Text>
+                  <Text style={[styles.bdVal, { color: theme.colors.warning }]}>- {fmt(data.custoCombustivel)}</Text>
+                </View>
+              )}
+              <View style={styles.bdTotal}>
+                <Text style={styles.bdTotalLbl}>= Ganho líquido</Text>
+                <Text style={[styles.bdTotalVal, { color: theme.colors.accentBright }]}>{fmt(data.ganhoLiquido)}</Text>
+              </View>
+
+              {/* Breakdown Ganho Real */}
+              {data.custoFixo > 0 && (
+                <>
+                  <SecLabel>Ganho Real</SecLabel>
+                  <View style={styles.bdRow}>
+                    <Text style={styles.bdLbl}>Ganho líquido</Text>
+                    <Text style={styles.bdVal}>{fmt(data.ganhoLiquido)}</Text>
+                  </View>
+                  <View style={styles.bdRow}>
+                    <Text style={styles.bdLbl}>Custos fixos</Text>
+                    <Text style={[styles.bdVal, { color: theme.colors.danger }]}>- {fmt(data.custoFixo)}</Text>
+                  </View>
+                  <View style={styles.bdTotal}>
+                    <Text style={styles.bdTotalLbl}>= Ganho real</Text>
+                    <Text style={[styles.bdTotalVal, { color: data.ganhoReal >= 0 ? theme.colors.success : theme.colors.danger }]}>{fmt(data.ganhoReal)}</Text>
+                  </View>
+                </>
+              )}
+
+              {/* Médias */}
+              {(data.ganhoPorCorrida > 0 || data.ganhoPorHora > 0 || data.ganhoPorKm > 0) && (
+                <>
+                  <SecLabel>Médias</SecLabel>
+                  <View style={styles.mediasRow}>
+                    {data.ganhoPorCorrida > 0 && (
+                      <View style={styles.mediaItem}>
+                        <Text style={styles.mediaVal}>{fmt(data.ganhoPorCorrida)}</Text>
+                        <Text style={styles.mediaLbl}>por corrida</Text>
+                      </View>
+                    )}
+                    {data.ganhoPorHora > 0 && (
+                      <View style={styles.mediaItem}>
+                        <Text style={styles.mediaVal}>{fmt(data.ganhoPorHora)}</Text>
+                        <Text style={styles.mediaLbl}>por hora</Text>
+                      </View>
+                    )}
+                    {data.ganhoPorKm > 0 && (
+                      <View style={styles.mediaItem}>
+                        <Text style={styles.mediaVal}>{`R$ ${fmtN(data.ganhoPorKm, 2)}`}</Text>
+                        <Text style={styles.mediaLbl}>por km</Text>
+                      </View>
+                    )}
+                  </View>
+                </>
+              )}
+            </>
           ) : (
+            /* ── Modo CPMA completo ── */
             <>
               <SecLabel>Financeiro</SecLabel>
               <View style={styles.grid}>
@@ -314,37 +431,37 @@ export default function CompartilharScreen() {
 
               <SecLabel>Atividade</SecLabel>
               <View style={styles.grid}>
-                <MiniCard icon="car"             label="KM Trabalhado" value={data.kmTrabalho > 0 ? fmtKm(data.kmTrabalho) : "—"} color={theme.colors.primary} />
-                <MiniCard icon="time"            label="Horas Trab."   value={data.horas > 0 ? fmtH(data.horas) : "—"}            color={theme.colors.accent} />
-                <MiniCard icon="home"            label="KM Pessoal"    value={data.kmPessoal != null ? fmtKm(data.kmPessoal) : "—"} color={theme.colors.indigo} />
+                <MiniCard icon="car"   label="KM Trabalhado" value={data.kmTrabalho > 0 ? fmtKm(data.kmTrabalho) : "—"} color={theme.colors.primary} />
+                <MiniCard icon="time"  label="Horas Trab."   value={data.horas > 0 ? fmtH(data.horas) : "—"}            color={theme.colors.accent} />
+                <MiniCard icon="home"  label="KM Pessoal"    value={data.kmPessoal != null ? fmtKm(data.kmPessoal) : "—"} color={theme.colors.indigo} />
               </View>
               <View style={styles.grid}>
-                <MiniCard icon="sunny"           label="Dias Trab."    value={String(data.diasTrabalhados)}                        color={theme.colors.success} />
-                <MiniCard icon="navigate"        label="Corridas"      value={String(data.corridas)}                               color={theme.colors.primary} />
-                <MiniCard icon="timer"           label="Corridas/hora" value={data.corridasPorHora > 0 ? fmtN(data.corridasPorHora) : "—"} color={theme.colors.warning} />
+                <MiniCard icon="sunny"    label="Dias Trab."    value={String(data.diasTrabalhados)}  color={theme.colors.success} />
+                <MiniCard icon="navigate" label="Corridas"      value={String(data.corridas)}         color={theme.colors.primary} />
+                <MiniCard icon="timer"    label="Corridas/hora" value={data.corridasPorHora > 0 ? fmtN(data.corridasPorHora) : "—"} color={theme.colors.warning} />
               </View>
 
               <SecLabel>Médias</SecLabel>
               <View style={styles.grid}>
-                <MiniCard icon="calendar"        label="Ganho / dia"    value={data.ganhoPorDia > 0 ? fmt(data.ganhoPorDia) : "—"}   color={theme.colors.primary} />
-                <MiniCard icon="hourglass"       label="Horas / dia"    value={data.horasPorDia > 0 ? fmtH(data.horasPorDia) : "—"}  color={theme.colors.accent} />
-                <MiniCard icon="speedometer-outline" label="KM/corrida" value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"} color={theme.colors.indigo} />
+                <MiniCard icon="calendar"            label="Ganho / dia"   value={data.ganhoPorDia > 0 ? fmt(data.ganhoPorDia) : "—"}   color={theme.colors.primary} />
+                <MiniCard icon="hourglass"           label="Horas / dia"   value={data.horasPorDia > 0 ? fmtH(data.horasPorDia) : "—"}  color={theme.colors.accent} />
+                <MiniCard icon="speedometer-outline" label="KM/corrida"    value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"} color={theme.colors.indigo} />
               </View>
               <View style={styles.grid}>
-                <MiniCard icon="cash-outline"    label="Ganho/corrida"  value={data.ganhoPorCorrida > 0 ? fmt(data.ganhoPorCorrida) : "—"}  color={theme.colors.success} />
-                <MiniCard icon="trending-up"     label="Ganho / hora"   value={data.ganhoPorHora > 0 ? fmt(data.ganhoPorHora) : "—"}         color={theme.colors.primary} />
-                <MiniCard icon="leaf"            label="Real / hora"    value={data.ganhoRealPorHora !== 0 ? fmt(data.ganhoRealPorHora) : "—"} color={data.ganhoRealPorHora >= 0 ? theme.colors.success : theme.colors.danger} />
+                <MiniCard icon="cash-outline" label="Ganho/corrida" value={data.ganhoPorCorrida > 0 ? fmt(data.ganhoPorCorrida) : "—"}  color={theme.colors.success} />
+                <MiniCard icon="trending-up"  label="Ganho / hora"  value={data.ganhoPorHora > 0 ? fmt(data.ganhoPorHora) : "—"}        color={theme.colors.primary} />
+                <MiniCard icon="leaf"         label="Real / hora"   value={data.ganhoRealPorHora !== 0 ? fmt(data.ganhoRealPorHora) : "—"} color={data.ganhoRealPorHora >= 0 ? theme.colors.success : theme.colors.danger} />
               </View>
 
               <SecLabel>Índices</SecLabel>
               <View style={styles.grid}>
-                <MiniCard icon="trending-down"   label="Custo / hora"   value={data.custoPorHora > 0 ? fmt(data.custoPorHora) : "—"}    color={theme.colors.danger} />
-                <MiniCard icon="remove-circle"   label="Custo/corrida"  value={data.custoPorCorrida > 0 ? fmt(data.custoPorCorrida) : "—"} color={theme.colors.orange} />
-                <MiniCard icon="analytics"       label="Custo / km"     value={data.custoPorKm > 0 ? `R$ ${fmtN(data.custoPorKm, 2)}` : "—"} color={theme.colors.warning} />
+                <MiniCard icon="trending-down"  label="Custo / hora"  value={data.custoPorHora > 0 ? fmt(data.custoPorHora) : "—"}    color={theme.colors.danger} />
+                <MiniCard icon="remove-circle"  label="Custo/corrida" value={data.custoPorCorrida > 0 ? fmt(data.custoPorCorrida) : "—"} color={theme.colors.orange} />
+                <MiniCard icon="analytics"      label="Custo / km"    value={data.custoPorKm > 0 ? `R$ ${fmtN(data.custoPorKm, 2)}` : "—"} color={theme.colors.warning} />
               </View>
               <View style={styles.grid}>
-                <MiniCard icon="add-circle"      label="Ganho / km"     value={data.ganhoPorKm > 0 ? `R$ ${fmtN(data.ganhoPorKm, 2)}` : "—"} color={theme.colors.primary} />
-                <MiniCard icon="leaf-outline"    label="Real / km"      value={data.ganhoPorKmReal !== 0 ? `R$ ${fmtN(data.ganhoPorKmReal, 2)}` : "—"} color={data.ganhoPorKmReal >= 0 ? theme.colors.success : theme.colors.danger} />
+                <MiniCard icon="add-circle"   label="Ganho / km" value={data.ganhoPorKm > 0 ? `R$ ${fmtN(data.ganhoPorKm, 2)}` : "—"} color={theme.colors.primary} />
+                <MiniCard icon="leaf-outline" label="Real / km"  value={data.ganhoPorKmReal !== 0 ? `R$ ${fmtN(data.ganhoPorKmReal, 2)}` : "—"} color={data.ganhoPorKmReal >= 0 ? theme.colors.success : theme.colors.danger} />
                 <View style={{ width: SHARE_W }} />
               </View>
             </>
@@ -534,6 +651,125 @@ const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     textAlign: "center",
     marginTop: 14,
+  },
+
+  // ── Modo ganho: KPIs principais ──────────────────────────────────────────
+  kpiRow: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 14,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  kpiBlock: {
+    flex: 1,
+    padding: 10,
+    alignItems: "center",
+  },
+  kpiSep: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    marginVertical: 8,
+  },
+  kpiLabel: {
+    ...theme.font.regular,
+    fontSize: 9,
+    color: "rgba(255,255,255,0.6)",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  kpiValue: {
+    ...theme.font.bold,
+    fontSize: 13,
+    color: "#fff",
+    textAlign: "center",
+  },
+  kpiPct: {
+    ...theme.font.medium,
+    fontSize: 9,
+    color: "rgba(255,255,255,0.5)",
+    marginTop: 2,
+  },
+
+  // ── Modo ganho: atividade inline ──────────────────────────────────────────
+  atividadeRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 14,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  atividadeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  atividadeTxt: {
+    ...theme.font.medium,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.65)",
+  },
+
+  // ── Modo ganho: breakdown rows ────────────────────────────────────────────
+  bdRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 3,
+  },
+  bdLbl: {
+    ...theme.font.regular,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.65)",
+    flex: 1,
+  },
+  bdVal: {
+    ...theme.font.semibold,
+    fontSize: 12,
+    color: "#fff",
+  },
+  bdTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.2)",
+    marginTop: 4,
+    paddingTop: 5,
+    marginBottom: 2,
+  },
+  bdTotalLbl: {
+    ...theme.font.bold,
+    fontSize: 13,
+    color: "#fff",
+  },
+  bdTotalVal: {
+    ...theme.font.bold,
+    fontSize: 15,
+  },
+
+  // ── Modo ganho: médias ────────────────────────────────────────────────────
+  mediasRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  mediaItem: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 10,
+    padding: 10,
+    alignItems: "center",
+  },
+  mediaVal: {
+    ...theme.font.bold,
+    fontSize: 13,
+    color: theme.colors.accentBright,
+    marginBottom: 2,
+  },
+  mediaLbl: {
+    ...theme.font.regular,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.55)",
   },
 });
 
