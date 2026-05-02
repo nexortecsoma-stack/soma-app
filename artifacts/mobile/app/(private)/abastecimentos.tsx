@@ -142,7 +142,7 @@ export default function Abastecimentos() {
     if (!open) return;
     if (!editing) {
       setPrecoLitro(valoresPadrao.preco_por_litro || 0);
-      setAutonomia(valoresPadrao.autonomia_km_litro ? String(valoresPadrao.autonomia_km_litro) : "");
+      setAutonomia(valoresPadrao.autonomia_km_litro ? Number(valoresPadrao.autonomia_km_litro).toFixed(1) : "");
       setPercentualCarga("");
       setTipo(isEletrico ? "energia" : "gasolina");
     }
@@ -154,7 +154,7 @@ export default function Abastecimentos() {
     setValor(0);
     setPrecoLitro(valoresPadrao.preco_por_litro || 0);
     setTipo(isEletrico ? "energia" : "gasolina");
-    setAutonomia(valoresPadrao.autonomia_km_litro ? String(valoresPadrao.autonomia_km_litro) : "");
+    setAutonomia(valoresPadrao.autonomia_km_litro ? Number(valoresPadrao.autonomia_km_litro).toFixed(1) : "");
     setPercentualCarga("");
     setOpen(true);
   };
@@ -165,7 +165,7 @@ export default function Abastecimentos() {
     setValor(Number(a.valor_total) || 0);
     setPrecoLitro(Number(a.preco_por_litro) || 0);
     setTipo(a.tipo_combustivel ?? "gasolina");
-    setAutonomia(a.autonomia_km_litro != null ? String(a.autonomia_km_litro) : "");
+    setAutonomia(a.autonomia_km_litro != null ? Number(a.autonomia_km_litro).toFixed(1) : "");
     if (a.consumo_kwh && capacidadeBateriaKwh > 0) {
       const perc = (Number(a.consumo_kwh) / capacidadeBateriaKwh) * 100;
       setPercentualCarga(perc.toFixed(0));
