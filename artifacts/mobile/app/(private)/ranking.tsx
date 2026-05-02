@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { useUI } from "@/hooks/UIContext";
@@ -428,7 +429,31 @@ export default function RankingScreen() {
                 disabled={!perfil?.participar_ranking_soma}
               />
               {minhaPosicao >= 0 ? (
-                <Text style={styles.minha}>Sua posição atual: #{minhaPosicao + 1}</Text>
+                <View style={{ alignItems: "center", gap: 6, marginTop: 8 }}>
+                  <Text style={styles.minha}>Sua posição atual: #{minhaPosicao + 1}</Text>
+                  <Pressable
+                    onPress={() => {
+                      const meu = filtrados[minhaPosicao]!;
+                      router.push({
+                        pathname: "/(private)/compartilhar-ranking",
+                        params: {
+                          posicao:      String(minhaPosicao + 1),
+                          periodo:      labelPeriodo(filtro, refDate),
+                          ganhoBruto:   String(meu.ganho_bruto),
+                          ganhoLiquido: String(meu.ganho_liquido),
+                          ganhoPorHora: String(meu.ganho_por_hora),
+                          ganhoPorKm:   String(meu.ganho_por_km),
+                          horas:        String(meu.horas_trabalhadas),
+                          km:           String(meu.km_percorrido),
+                        },
+                      });
+                    }}
+                    style={({ pressed }) => [styles.linkCompartilhar, pressed && { opacity: 0.6 }]}
+                  >
+                    <Ionicons name="share-social-outline" size={13} color={theme.colors.primary} />
+                    <Text style={styles.linkCompartilharTxt}>Ver card para compartilhar</Text>
+                  </Pressable>
+                </View>
               ) : perfil?.participar_ranking_soma ? (
                 <Text style={styles.minha}>
                   Toque em atualizar para entrar na lista de {labelPeriodo(filtro, refDate)}.
@@ -547,7 +572,18 @@ const styles = StyleSheet.create({
     ...theme.font.semibold, fontSize: 13, color: theme.colors.text,
   },
 
-  minha: { textAlign: "center", marginTop: 10, ...theme.font.medium, fontSize: 12, color: theme.colors.textMuted },
+  minha: { textAlign: "center", ...theme.font.medium, fontSize: 12, color: theme.colors.textMuted },
+  linkCompartilhar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 4,
+  },
+  linkCompartilharTxt: {
+    ...theme.font.medium,
+    fontSize: 12,
+    color: theme.colors.primary,
+  },
 
   // ── Card ──
   cardWrap: {
