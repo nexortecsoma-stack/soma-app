@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { dateEngine } from "@/engines/date-engine";
@@ -141,9 +141,19 @@ function SecLabel({ children }: { children: string }) {
 export default function CompartilharScreen() {
   const insets = useSafeAreaInsets();
   const { perfil } = useAuth();
+  const { data: dataParam } = useLocalSearchParams<{ data?: string }>();
 
-  const [filtro, setFiltro] = useState<FiltroPeriodo>("mes");
-  const [refDate, setRefDate] = useState<Date>(() => refInicial("mes"));
+  // Quando vem de "Meus Ganhos" com uma data específica, fixamos no dia
+  const modoGanho = !!dataParam;
+
+  const [filtro, setFiltro] = useState<FiltroPeriodo>(() => modoGanho ? "dia" : "mes");
+  const [refDate, setRefDate] = useState<Date>(() => {
+    if (modoGanho && dataParam) {
+      const [y, m, d] = dataParam.split("-").map(Number);
+      return new Date(y!, m! - 1, d!);
+    }
+    return refInicial("mes");
+  });
 
   const mudarFiltro = (novo: FiltroPeriodo) => {
     setFiltro(novo);
@@ -191,40 +201,43 @@ export default function CompartilharScreen() {
           <Text style={styles.backTxt}>Voltar</Text>
         </Pressable>
 
-        {/* ── Chips de período ───────────────────────────────────────────── */}
-        <View style={styles.chipsRow}>
-          {FILTROS.map((f) => (
-            <Pressable
-              key={f.id}
-              style={[styles.chip, filtro === f.id && styles.chipActive]}
-              onPress={() => mudarFiltro(f.id)}
-            >
-              <Text style={[styles.chipTxt, filtro === f.id && styles.chipTxtActive]}>
-                {f.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {/* ── Chips e navegação — apenas no modo livre (sem data específica) ── */}
+        {!modoGanho && (
+          <>
+            <View style={styles.chipsRow}>
+              {FILTROS.map((f) => (
+                <Pressable
+                  key={f.id}
+                  style={[styles.chip, filtro === f.id && styles.chipActive]}
+                  onPress={() => mudarFiltro(f.id)}
+                >
+                  <Text style={[styles.chipTxt, filtro === f.id && styles.chipTxtActive]}>
+                    {f.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
 
-        {/* ── Navegação de período ────────────────────────────────────────── */}
-        <View style={styles.navRow}>
-          {filtro !== "todos" ? (
-            <Pressable onPress={() => setRefDate(navAnterior(filtro, refDate))} hitSlop={12} style={styles.navBtn}>
-              <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
-            </Pressable>
-          ) : <View style={styles.navBtn} />}
-          <Text style={styles.navLabel}>{periodoLabel}</Text>
-          {filtro !== "todos" ? (
-            <Pressable
-              onPress={() => !bloqueado && setRefDate(navProximo(filtro, refDate))}
-              hitSlop={12}
-              style={[styles.navBtn, bloqueado && { opacity: 0.25 }]}
-              disabled={bloqueado}
-            >
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
-            </Pressable>
-          ) : <View style={styles.navBtn} />}
-        </View>
+            <View style={styles.navRow}>
+              {filtro !== "todos" ? (
+                <Pressable onPress={() => setRefDate(navAnterior(filtro, refDate))} hitSlop={12} style={styles.navBtn}>
+                  <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
+                </Pressable>
+              ) : <View style={styles.navBtn} />}
+              <Text style={styles.navLabel}>{periodoLabel}</Text>
+              {filtro !== "todos" ? (
+                <Pressable
+                  onPress={() => !bloqueado && setRefDate(navProximo(filtro, refDate))}
+                  hitSlop={12}
+                  style={[styles.navBtn, bloqueado && { opacity: 0.25 }]}
+                  disabled={bloqueado}
+                >
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+                </Pressable>
+              ) : <View style={styles.navBtn} />}
+            </View>
+          </>
+        )}
 
         {/* ── Card ───────────────────────────────────────────────────────── */}
         <LinearGradient

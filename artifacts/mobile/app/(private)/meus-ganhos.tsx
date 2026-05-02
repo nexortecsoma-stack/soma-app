@@ -515,7 +515,7 @@ export default function MeusGanhos() {
                         {/* Ganho Líquido Real */}
                         <View style={styles.secHeader}>
                           <Ionicons name="calculator-outline" size={13} color={theme.colors.accent} />
-                          <Text style={[styles.secTit, { color: theme.colors.accent }]}>Ganho Líquido Real</Text>
+                          <Text style={[styles.secTit, { color: theme.colors.accent }]}>Ganho Real</Text>
                         </View>
 
                         <BRow label="Ganho líquido" valor={bd.ganhoLiquido} />
@@ -583,6 +583,16 @@ export default function MeusGanhos() {
                         </View>
                       </Pressable>
                     )}
+
+                    {/* ── Link compartilhar ── */}
+                    <Pressable
+                      onPress={() => router.push({ pathname: "/(private)/compartilhar", params: { data: dataISO } })}
+                      hitSlop={8}
+                      style={styles.shareLink}
+                    >
+                      <Ionicons name="share-social-outline" size={13} color={theme.colors.primary} />
+                      <Text style={styles.shareLinkTxt}>Ver card para compartilhar</Text>
+                    </Pressable>
                   </View>
                 ) : null}
               </AppCard>
@@ -709,6 +719,19 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   proBadgeTxt: { ...theme.font.bold, fontSize: 12, color: "#fff", letterSpacing: 0.5 },
+  shareLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-end",
+    marginTop: 12,
+    paddingVertical: 2,
+  },
+  shareLinkTxt: {
+    ...theme.font.medium,
+    fontSize: 12,
+    color: theme.colors.primary,
+  },
   row2: { flexDirection: "row" },
   calLabel: { ...theme.font.medium, fontSize: 13, color: theme.colors.text, marginBottom: 6 },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: 16 },
