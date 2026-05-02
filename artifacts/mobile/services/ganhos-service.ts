@@ -75,4 +75,13 @@ export const ganhosService = {
     const { error } = await supabase.from("ganhos").delete().eq("id", id);
     if (error) throw error;
   },
+
+  async removeByDate(profileId: string, date: string) {
+    const { error } = await supabase
+      .from("ganhos")
+      .delete()
+      .eq("profile_id", profileId)
+      .eq("data_ganho", date);
+    if (error) throw error;
+  },
 };

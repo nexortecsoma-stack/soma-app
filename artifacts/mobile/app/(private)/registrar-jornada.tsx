@@ -121,15 +121,7 @@ export default function RegistrarJornada() {
     const dataISO = dateEngine.formatarISO(data);
     const duplicada = (jornadasList.data ?? []).some((j) => j.data_jornada === dataISO);
     if (duplicada) {
-      showModal({
-        type: "confirm",
-        title: "Jornada já registrada",
-        message: `Já existe uma jornada em ${dateEngine.formatarBR(dataISO)}. Registrar outra mesmo assim?`,
-        confirmLabel: "Sim, registrar",
-        cancelLabel: "Cancelar",
-        onConfirm: () => { hideModal(); executarSalvar(h, m, k, dataISO); },
-        onCancel: hideModal,
-      });
+      setErro(`Já existe uma jornada registrada em ${dateEngine.formatarBR(dataISO)}. Edite ou remova a existente em "Minhas Jornadas".`);
       return;
     }
     executarSalvar(h, m, k, dataISO);
