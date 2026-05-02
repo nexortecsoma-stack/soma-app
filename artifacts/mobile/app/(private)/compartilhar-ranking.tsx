@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   Pressable,
@@ -11,83 +12,89 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { currencyEngine } from "@/engines/currency-engine";
-import { useAuth } from "@/hooks/AuthContext";
+import { rankingEngine, periodoParaDatas, type CampoRanking, type RankingPeriodo } from "@/engines/ranking-engine";
+import { rankingService } from "@/services/ranking-service";
 import { APP_FULL_NAME } from "@/lib/constants";
 
 const W = Dimensions.get("window").width;
+const TOP = 10;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function posColor(pos: number): string {
+function isoLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function medalColor(pos: number): string {
   if (pos === 1) return "#F59E0B";
   if (pos === 2) return "#94A3B8";
   if (pos === 3) return "#CD7F32";
-  return theme.colors.accentBright;
+  return "rgba(255,255,255,0.4)";
 }
 
-function posLabel(pos: number): string {
+function medalEmoji(pos: number): string {
   if (pos === 1) return "🥇";
   if (pos === 2) return "🥈";
   if (pos === 3) return "🥉";
-  return `#${pos}`;
+  return `${pos}º`;
+}
+
+const CAMPO_LABELS: Record<CampoRanking, string> = {
+  ganho_bruto:    "Ganho Bruto",
+  ganho_liquido:  "Ganho Líquido",
+  ganho_por_hora: "Ganho/hora",
+  ganho_por_km:   "Ganho/km",
+};
+
+function fmtValor(campo: CampoRanking, item: ReturnType<typeof rankingEngine.filtrar>[number]): string {
+  const v = Number(item[campo] ?? 0);
+  if (campo === "ganho_por_km") return `R$ ${v.toFixed(2).replace(".", ",")}`;
+  return currencyEngine.formatar(v);
 }
 
 // ─── Tela ─────────────────────────────────────────────────────────────────────
 
 export default function CompartilharRankingScreen() {
   const insets = useSafeAreaInsets();
-  const { perfil } = useAuth();
 
   const {
-    posicao: posStr,
+    filtro: filtroParam,
+    refDate: refDateParam,
+    campo: campoParam,
     periodo,
-    ganhoBruto: brutoStr,
-    ganhoLiquido: liquidoStr,
-    ganhoPorHora: horaStr,
-    ganhoPorKm: kmStr,
-    horas: horasStr,
-    km: kmPercStr,
   } = useLocalSearchParams<{
-    posicao: string;
+    filtro: string;
+    refDate: string;
+    campo: string;
     periodo: string;
-    ganhoBruto: string;
-    ganhoLiquido: string;
-    ganhoPorHora: string;
-    ganhoPorKm: string;
-    horas: string;
-    km: string;
   }>();
 
-  const posicao      = Number(posStr ?? "0");
-  const ganhoBruto   = Number(brutoStr ?? "0");
-  const ganhoLiquido = Number(liquidoStr ?? "0");
-  const ganhoPorHora = Number(horaStr ?? "0");
-  const ganhoPorKm   = Number(kmStr ?? "0");
-  const horas        = Number(horasStr ?? "0");
-  const km           = Number(kmPercStr ?? "0");
+  const filtro  = (filtroParam ?? "mes") as RankingPeriodo;
+  const campo   = (campoParam  ?? "ganho_liquido") as CampoRanking;
+  const refDate = refDateParam ? new Date(refDateParam) : new Date();
 
-  const nome   = perfil?.nome_publico || perfil?.nome || "Motorista";
-  const cidade = [perfil?.cidade, perfil?.uf].filter(Boolean).join("/") || null;
+  const { data: todos, isLoading } = useQuery({
+    queryKey: ["ranking"],
+    queryFn:  () => rankingService.listAll(),
+    staleTime: 60000,
+  });
 
-  const cor = posColor(posicao);
+  const top = useMemo(() => {
+    if (!todos) return [];
+    let base = todos;
+    if (filtro !== "todos") {
+      const { inicio } = periodoParaDatas(filtro, refDate);
+      const inicioISO  = isoLocal(inicio);
+      base = base.filter((r) => r.periodo_inicio === inicioISO);
+    }
+    return rankingEngine.ordenar(base, campo).slice(0, TOP);
+  }, [todos, filtro, refDate, campo]);
 
-  const fmt  = (v: number) => currencyEngine.formatar(v);
-  const fmtH = (h: number) => {
-    const hh = Math.floor(h);
-    const mm = Math.round((h - hh) * 60);
-    return mm > 0 ? `${hh}h${String(mm).padStart(2, "0")}min` : `${hh}h`;
-  };
-  const fmtKm = (v: number) => `${v.toFixed(1).replace(".", ",")} km`;
-
-  const stats = [
-    { lab: "Ganho bruto",   val: fmt(ganhoBruto),            color: theme.colors.accent },
-    { lab: "Ganho líquido", val: fmt(ganhoLiquido),           color: ganhoLiquido >= 0 ? theme.colors.success : theme.colors.danger },
-    { lab: "R$ por hora",   val: fmt(ganhoPorHora),           color: theme.colors.primary },
-    { lab: "R$ por km",     val: `R$ ${ganhoPorKm.toFixed(2).replace(".", ",")}`, color: theme.colors.accentBright },
-  ];
+  const campoLabel = CAMPO_LABELS[campo] ?? "Ganho Líquido";
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.surfaceMuted }}>
@@ -116,7 +123,7 @@ export default function CompartilharRankingScreen() {
           end={{ x: 1, y: 1 }}
           style={s.card}
         >
-          {/* Header: logo + brand + período */}
+          {/* Header */}
           <View style={s.header}>
             <View style={s.headerLeft}>
               <Image
@@ -134,74 +141,66 @@ export default function CompartilharRankingScreen() {
             </View>
           </View>
 
-          {/* Posição destaque */}
-          <View style={s.posRow}>
-            <View style={[s.posBadge, { borderColor: cor }]}>
-              <Text style={[s.posNum, { color: cor }]}>
-                {posicao <= 3 ? posLabel(posicao) : `#${posicao}`}
-              </Text>
-            </View>
-            <View style={s.posInfo}>
-              <Text style={s.posLabel}>Ranking SOMA</Text>
-              <Text style={s.posTexto}>
-                {posicao === 1 ? "Líder do ranking!" :
-                 posicao <= 3 ? `Top ${posicao} do ranking` :
-                 `${posicao}ª posição`}
-              </Text>
+          {/* Título */}
+          <View style={s.tituloRow}>
+            <Ionicons name="trophy" size={18} color="#F59E0B" />
+            <Text style={s.titulo}>Ranking</Text>
+            <View style={s.campoTag}>
+              <Text style={s.campoTagTxt}>{campoLabel}</Text>
             </View>
           </View>
 
-          {/* Motorista */}
           <View style={s.divider} />
-          <View style={s.driverRow}>
-            <View style={s.driverAvatar}>
-              {perfil?.foto_url ? (
-                <Image source={{ uri: perfil.foto_url }} style={s.driverFoto} />
-              ) : (
-                <Ionicons name="person" size={18} color={theme.colors.accentBright} />
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.driverName} numberOfLines={1}>{nome}</Text>
-              {cidade && <Text style={s.driverCity}>{cidade}</Text>}
-            </View>
-          </View>
 
-          {/* Stats grid */}
-          <View style={s.divider} />
-          <View style={s.statsGrid}>
-            {stats.map((st) => (
-              <View key={st.lab} style={s.statCell}>
-                <Text style={s.statLab} numberOfLines={1}>{st.lab}</Text>
-                <Text style={[s.statVal, { color: st.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                  {st.val}
-                </Text>
-              </View>
-            ))}
-          </View>
+          {/* Lista */}
+          {isLoading ? (
+            <ActivityIndicator color={theme.colors.accentBright} style={{ marginVertical: 24 }} />
+          ) : top.length === 0 ? (
+            <Text style={s.vazio}>Nenhum participante neste período.</Text>
+          ) : (
+            top.map((item, idx) => {
+              const pos = idx + 1;
+              const cor = medalColor(pos);
+              const isTop3 = pos <= 3;
+              return (
+                <View key={item.profile_id} style={[s.row, isTop3 && s.rowDestaque]}>
+                  {/* Posição */}
+                  <View style={[s.posBadge, isTop3 && { borderColor: cor }]}>
+                    <Text style={[s.posNum, { color: isTop3 ? cor : "rgba(255,255,255,0.5)" }]}>
+                      {medalEmoji(pos)}
+                    </Text>
+                  </View>
 
-          {/* Atividade */}
-          {(horas > 0 || km > 0) && (
-            <>
-              <View style={s.divider} />
-              <View style={s.atividadeRow}>
-                {horas > 0 && (
-                  <View style={s.atividadeItem}>
-                    <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.5)" />
-                    <Text style={s.atividadeTxt}>{fmtH(horas)}</Text>
+                  {/* Avatar + nome */}
+                  <View style={s.avatarWrap}>
+                    {item.foto_url ? (
+                      <Image source={{ uri: item.foto_url }} style={s.avatar} />
+                    ) : (
+                      <View style={s.avatarFallback}>
+                        <Ionicons name="person" size={14} color={theme.colors.accentBright} />
+                      </View>
+                    )}
                   </View>
-                )}
-                {km > 0 && (
-                  <View style={s.atividadeItem}>
-                    <Ionicons name="speedometer-outline" size={13} color="rgba(255,255,255,0.5)" />
-                    <Text style={s.atividadeTxt}>{fmtKm(km)}</Text>
+                  <View style={s.nomeWrap}>
+                    <Text style={s.nome} numberOfLines={1}>{item.nome_publico || "—"}</Text>
+                    {(item.cidade || item.uf) && (
+                      <Text style={s.cidade} numberOfLines={1}>
+                        {[item.cidade, item.uf].filter(Boolean).join("/")}
+                      </Text>
+                    )}
                   </View>
-                )}
-              </View>
-            </>
+
+                  {/* Valor */}
+                  <Text style={[s.valor, isTop3 && { color: cor }]} numberOfLines={1}>
+                    {fmtValor(campo, item)}
+                  </Text>
+                </View>
+              );
+            })
           )}
 
           {/* Rodapé */}
+          <View style={s.divider} />
           <View style={s.footer}>
             <Text style={s.footerTxt}>soma.nexortec.com.br</Text>
           </View>
@@ -240,7 +239,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 18,
+    marginBottom: 16,
   },
   headerLeft: {
     flexDirection: "row",
@@ -248,9 +247,9 @@ const s = StyleSheet.create({
     gap: 10,
   },
   logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 9,
+    width: 38,
+    height: 38,
+    borderRadius: 8,
   },
   brand: {
     ...theme.font.bold,
@@ -261,11 +260,11 @@ const s = StyleSheet.create({
   brandSub: {
     ...theme.font.regular,
     fontSize: 8,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.45)",
     marginTop: 1,
   },
   periodoTag: {
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -276,136 +275,125 @@ const s = StyleSheet.create({
     color: theme.colors.accentBright,
   },
 
-  // Posição
-  posRow: {
+  // Título
+  tituloRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 14,
   },
-  posBadge: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  posNum: {
-    ...theme.font.bold,
-    fontSize: 26,
-  },
-  posInfo: {
-    flex: 1,
-  },
-  posLabel: {
-    ...theme.font.medium,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 3,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  posTexto: {
+  titulo: {
     ...theme.font.bold,
     fontSize: 18,
     color: "#fff",
+    flex: 1,
+  },
+  campoTag: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  campoTagTxt: {
+    ...theme.font.medium,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.7)",
   },
 
   divider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    marginVertical: 14,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginVertical: 12,
   },
 
-  // Motorista
-  driverRow: {
+  vazio: {
+    ...theme.font.regular,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.4)",
+    textAlign: "center",
+    marginVertical: 20,
+  },
+
+  // Linhas do ranking
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    paddingHorizontal: 6,
   },
-  driverAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.1)",
+  rowDestaque: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    marginBottom: 2,
+  },
+
+  posBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     borderWidth: 1.5,
-    borderColor: theme.colors.accentBright + "50",
+    borderColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
   },
-  driverFoto: {
-    width: 42,
-    height: 42,
-  },
-  driverName: {
+  posNum: {
     ...theme.font.bold,
-    fontSize: 15,
+    fontSize: 13,
+    textAlign: "center",
+  },
+
+  avatarWrap: {
+    width: 32,
+    height: 32,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  avatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  nomeWrap: {
+    flex: 1,
+  },
+  nome: {
+    ...theme.font.semibold,
+    fontSize: 13,
     color: "#fff",
   },
-  driverCity: {
+  cidade: {
     ...theme.font.regular,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.55)",
-    marginTop: 2,
-  },
-
-  // Stats
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  statCell: {
-    width: (W - 32 - 40 - 8) / 2,
-    backgroundColor: "rgba(255,255,255,0.07)",
-    borderRadius: 12,
-    padding: 12,
-  },
-  statLab: {
-    ...theme.font.medium,
     fontSize: 10,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 5,
-    textTransform: "uppercase",
-  },
-  statVal: {
-    ...theme.font.bold,
-    fontSize: 17,
+    color: "rgba(255,255,255,0.45)",
+    marginTop: 1,
   },
 
-  // Atividade
-  atividadeRow: {
-    flexDirection: "row",
-    gap: 18,
-    justifyContent: "center",
-  },
-  atividadeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  atividadeTxt: {
-    ...theme.font.medium,
-    fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
+  valor: {
+    ...theme.font.bold,
+    fontSize: 13,
+    color: theme.colors.accentBright,
+    textAlign: "right",
   },
 
   // Rodapé
   footer: {
-    marginTop: 16,
     alignItems: "center",
   },
   footerTxt: {
     ...theme.font.regular,
     fontSize: 10,
-    color: "rgba(255,255,255,0.3)",
+    color: "rgba(255,255,255,0.25)",
     letterSpacing: 0.5,
   },
 
-  // Dica
   dica: {
     ...theme.font.regular,
     fontSize: 12,

@@ -416,46 +416,41 @@ export default function RankingScreen() {
 
             {/* ── Card de atualização ── */}
             <AppCard style={{ marginBottom: 10, marginTop: 8 }}>
-              <PrimaryButton
-                label={
-                  perfil?.participar_ranking_soma
-                    ? `Atualizar minha posição (${labelPeriodo(filtro, refDate)})`
-                    : "Habilite a participação no Perfil"
-                }
-                icon="refresh"
-                onPress={sincronizarAgora}
-                loading={sincronizar.isPending}
-                fullWidth
-                disabled={!perfil?.participar_ranking_soma}
-              />
-              {minhaPosicao >= 0 ? (
-                <View style={{ alignItems: "center", gap: 6, marginTop: 8 }}>
-                  <Text style={styles.minha}>Sua posição atual: #{minhaPosicao + 1}</Text>
-                  <Pressable
-                    onPress={() => {
-                      const meu = filtrados[minhaPosicao]!;
-                      router.push({
-                        pathname: "/(private)/compartilhar-ranking",
-                        params: {
-                          posicao:      String(minhaPosicao + 1),
-                          periodo:      labelPeriodo(filtro, refDate),
-                          ganhoBruto:   String(meu.ganho_bruto),
-                          ganhoLiquido: String(meu.ganho_liquido),
-                          ganhoPorHora: String(meu.ganho_por_hora),
-                          ganhoPorKm:   String(meu.ganho_por_km),
-                          horas:        String(meu.horas_trabalhadas),
-                          km:           String(meu.km_percorrido),
-                        },
-                      });
-                    }}
-                    style={({ pressed }) => [styles.linkCompartilhar, pressed && { opacity: 0.6 }]}
-                  >
-                    <Ionicons name="share-social-outline" size={13} color={theme.colors.primary} />
-                    <Text style={styles.linkCompartilharTxt}>Ver card para compartilhar</Text>
-                  </Pressable>
+              <View style={styles.updateRow}>
+                <View style={{ flex: 1 }}>
+                  <PrimaryButton
+                    label={
+                      perfil?.participar_ranking_soma
+                        ? `Atualizar minha posição`
+                        : "Habilite a participação no Perfil"
+                    }
+                    icon="refresh"
+                    onPress={sincronizarAgora}
+                    loading={sincronizar.isPending}
+                    fullWidth
+                    disabled={!perfil?.participar_ranking_soma}
+                  />
                 </View>
+                <Pressable
+                  onPress={() => router.push({
+                    pathname: "/(private)/compartilhar-ranking",
+                    params: {
+                      filtro:   filtro,
+                      refDate:  refDate.toISOString(),
+                      campo:    campo,
+                      periodo:  labelPeriodo(filtro, refDate),
+                    },
+                  })}
+                  style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.6 }]}
+                  hitSlop={8}
+                >
+                  <Ionicons name="share-social-outline" size={20} color={theme.colors.primary} />
+                </Pressable>
+              </View>
+              {minhaPosicao >= 0 ? (
+                <Text style={[styles.minha, { marginTop: 8 }]}>Sua posição atual: #{minhaPosicao + 1}</Text>
               ) : perfil?.participar_ranking_soma ? (
-                <Text style={styles.minha}>
+                <Text style={[styles.minha, { marginTop: 8 }]}>
                   Toque em atualizar para entrar na lista de {labelPeriodo(filtro, refDate)}.
                 </Text>
               ) : null}
@@ -573,16 +568,18 @@ const styles = StyleSheet.create({
   },
 
   minha: { textAlign: "center", ...theme.font.medium, fontSize: 12, color: theme.colors.textMuted },
-  linkCompartilhar: {
+  updateRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingVertical: 4,
+    gap: 10,
   },
-  linkCompartilharTxt: {
-    ...theme.font.medium,
-    fontSize: 12,
-    color: theme.colors.primary,
+  shareBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.primary + "15",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // ── Card ──
