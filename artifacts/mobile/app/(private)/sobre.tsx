@@ -34,7 +34,7 @@ export default function SobreScreen() {
 
         <AppCard style={{ marginTop: 12 }}>
           <Text style={styles.section}>O que você consegue fazer</Text>
-          <Bullet texto="Registrar jornadas no modo manual ou automático com GPS" />
+          <Bullet texto="Registrar jornadas de forma manual com hora, distância e ganhos" />
           <Bullet texto="Lançar ganhos por plataforma (Uber, 99, InDrive, iFood, entrega, particular e suas extras)" />
           <Bullet texto="Controlar despesas variáveis e custos fixos do veículo" />
           <Bullet texto="Calcular o IPVA, depreciação, seguro e financiamento de forma automática" />

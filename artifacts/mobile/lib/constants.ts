@@ -120,10 +120,6 @@ export const FAQ_ITENS = [
     resposta: "Sim. O plano Free permite cadastrar 2 plataformas fixas + 1 plataforma extra. O plano Pro libera quantas plataformas você quiser e relatórios avançados.",
   },
   {
-    pergunta: "Como inicio uma jornada automática?",
-    resposta: "Em Registrar Jornada escolha o modo Automática (GPS). O app vai cronometrar o tempo, somar a distância e permite pausar quando você parar para refeição ou descanso.",
-  },
-  {
     pergunta: "Por que meu CPF fica bloqueado depois de salvar?",
     resposta: "Para evitar duplicidade entre contas e proteger seus dados, o CPF é validado uma vez e fica congelado. Se precisar trocar, fale com o suporte.",
   },

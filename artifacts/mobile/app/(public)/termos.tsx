@@ -31,7 +31,7 @@ const TERMOS: { titulo: string; texto: string }[] = [
   {
     titulo: "4. Funcionalidades",
     texto:
-      `O ${APP_NAME} poderá oferecer:\n\n• Registro de jornadas (manual e automático via GPS);\n• Controle de ganhos, despesas e abastecimentos;\n• Relatórios e gráficos financeiros;\n• Ranking de desempenho entre motoristas;\n• Estimativas de custos fixos e variáveis.\n\nO ${APP_NAME} poderá modificar, suspender ou descontinuar funcionalidades a qualquer momento, sem aviso prévio.`,
+      `O ${APP_NAME} poderá oferecer:\n\n• Registro de jornadas (manual);\n• Controle de ganhos, despesas e abastecimentos;\n• Relatórios e gráficos financeiros;\n• Ranking de desempenho entre motoristas;\n• Estimativas de custos fixos e variáveis.\n\nO ${APP_NAME} poderá modificar, suspender ou descontinuar funcionalidades a qualquer momento, sem aviso prévio.`,
   },
   {
     titulo: "5. Ranking, Exposição e Compartilhamento",
@@ -51,7 +51,7 @@ const TERMOS: { titulo: string; texto: string }[] = [
   {
     titulo: "8. Limitação de Responsabilidade",
     texto:
-      `O ${APP_NAME} não se responsabiliza por:\n\n• Decisões financeiras tomadas com base nos dados do aplicativo;\n• Dados inseridos incorretamente pelo usuário;\n• Falhas externas de GPS, internet ou APIs de terceiros;\n• Perdas financeiras de qualquer natureza.`,
+      `O ${APP_NAME} não se responsabiliza por:\n\n• Decisões financeiras tomadas com base nos dados do aplicativo;\n• Dados inseridos incorretamente pelo usuário;\n• Falhas externas de internet ou APIs de terceiros;\n• Perdas financeiras de qualquer natureza.`,
   },
   {
     titulo: "9. Suspensão e Encerramento do Serviço",
@@ -81,7 +81,7 @@ const PRIVACIDADE: { titulo: string; texto: string }[] = [
   {
     titulo: "1. Dados Coletados",
     texto:
-      `1.1 Informações fornecidas pelo usuário: nome, e-mail, CPF, telefone, cidade/UF, dados do veículo e informações financeiras.\n\n1.2 Dados gerados automaticamente: localização (quando autorizada), quilometragem percorrida, tempo de jornada e interações no aplicativo.`,
+      `1.1 Informações fornecidas pelo usuário: nome, e-mail, CPF, telefone, cidade/UF, dados do veículo e informações financeiras.\n\n1.2 Dados gerados automaticamente: quilometragem percorrida (informada manualmente), tempo de jornada e interações no aplicativo.`,
   },
   {
     titulo: "2. Finalidade",
@@ -101,7 +101,7 @@ const PRIVACIDADE: { titulo: string; texto: string }[] = [
   {
     titulo: "5. Direitos do Usuário",
     texto:
-      `Você pode, a qualquer momento:\n\n• Acessar e corrigir seus dados;\n• Solicitar a exclusão de sua conta e dados;\n• Desativar sua participação no Ranking;\n• Revogar a autorização de coleta de localização via configurações do dispositivo.`,
+      `Você pode, a qualquer momento:\n\n• Acessar e corrigir seus dados;\n• Solicitar a exclusão de sua conta e dados;\n• Desativar sua participação no Ranking.`,
   },
   {
     titulo: "6. Retenção de Dados",
