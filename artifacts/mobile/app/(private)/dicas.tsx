@@ -250,6 +250,127 @@ export default function DicasScreen() {
           </View>
         </Secao>
 
+        {/* ── Combustível ── */}
+        <Secao
+          icone="flame"
+          cor="#16A34A"
+          titulo="Gasto com Combustível"
+          subtitulo="Registrar certo faz toda a diferença no seu resultado"
+        >
+          {/* Por que registrar */}
+          <P>
+            O combustível é geralmente o{" "}
+            <Text style={s.negrito}>maior custo variável</Text> do motorista de aplicativo — pode
+            representar 30% a 40% do ganho bruto. Registrá-lo corretamente no SOMA é fundamental
+            para saber o seu <Text style={s.negrito}>lucro real</Text>.
+          </P>
+
+          <InfoBox tipo="atencao">
+            Quem não registra o combustível acha que ganha muito mais do que realmente ganha.
+            O CPMA e o Ganho Líquido só são precisos se os abastecimentos estiverem lançados.
+          </InfoBox>
+
+          <Divisor />
+
+          {/* Como registrar */}
+          <Text style={s.subtitulo}>Como registrar corretamente</Text>
+
+          <Topico>
+            Lance cada abastecimento em <Text style={s.negrito}>Abastecimentos</Text> com valor,
+            litros, tipo de combustível e hodômetro. Isso alimenta o cálculo de custo por km.
+          </Topico>
+          <Topico>
+            Se você abasteceu parcialmente (ex.: só R$ 50), registre assim mesmo — o SOMA acumula
+            os valores ao longo do período selecionado.
+          </Topico>
+          <Topico>
+            Não esqueça abastecimentos pagos via plataforma (crédito de combustível da Uber,
+            99 etc.) — eles também são custo, mesmo que saiam do saldo da plataforma.
+          </Topico>
+
+          <InfoBox tipo="info">
+            O SOMA calcula automaticamente o{" "}
+            <Text style={s.negrito}>custo médio por km rodado</Text> com base nos seus
+            abastecimentos e hodômetro, aparecendo nos Gastos de Combustível e no CPMA.
+          </InfoBox>
+
+          <Divisor />
+
+          {/* Descontos */}
+          <Text style={s.subtitulo}>Economize com descontos no combustível</Text>
+          <P>
+            Muitas plataformas e redes de postos oferecem{" "}
+            <Text style={s.negrito}>descontos exclusivos para motoristas de app</Text>. Esses
+            benefícios são pouco divulgados, mas podem gerar uma economia expressiva todo mês.
+          </P>
+
+          <FormulaBox
+            linhas={[
+              { texto: "Desconto médio disponível: até 10% por litro" },
+              { texto: "Exemplo: R$ 4.000/mês em combustível com 10% de desconto" },
+              { texto: "→ Economia: R$ 400/mês  =  R$ 4.800/ano", destaque: true },
+            ]}
+          />
+
+          <P>
+            Dependendo do seu consumo mensal, a economia pode variar de{" "}
+            <Text style={s.negrito}>R$ 300 a R$ 400 por mês</Text> — só mudando onde e como você
+            abastece, sem trabalhar mais nenhuma hora a mais.
+          </P>
+
+          <Text style={s.subtitulo}>Onde encontrar descontos</Text>
+
+          <View style={s.localCard}>
+            <View style={s.localItem}>
+              <Ionicons name="car" size={18} color="#16A34A" />
+              <View style={{ flex: 1 }}>
+                <Text style={s.localTitulo}>Uber — Combustível & Manutenção</Text>
+                <Text style={s.localDesc}>
+                  Parceiros da Uber oferecem desconto no abastecimento via app. Consulte a seção
+                  "Benefícios" no app do motorista para ver postos parceiros na sua cidade.
+                </Text>
+              </View>
+            </View>
+            <View style={[s.localItem, { marginTop: 10 }]}>
+              <Ionicons name="car" size={18} color="#16A34A" />
+              <View style={{ flex: 1 }}>
+                <Text style={s.localTitulo}>99 — Clube de Benefícios</Text>
+                <Text style={s.localDesc}>
+                  A 99 tem parcerias com redes de postos para motoristas ativos. Acesse o app da
+                  99Pro e verifique os benefícios disponíveis na sua região.
+                </Text>
+              </View>
+            </View>
+            <View style={[s.localItem, { marginTop: 10 }]}>
+              <Ionicons name="card" size={18} color="#16A34A" />
+              <View style={{ flex: 1 }}>
+                <Text style={s.localTitulo}>Cartões e programas de fidelidade</Text>
+                <Text style={s.localDesc}>
+                  Cartões de crédito com cashback em postos (ex.: Méliuz, Livelo) e programas de
+                  fidelidade das redes (Shell Box, Ipiranga Km de Vantagens) podem somar mais
+                  economia sobre os descontos já existentes.
+                </Text>
+              </View>
+            </View>
+            <View style={[s.localItem, { marginTop: 10 }]}>
+              <Ionicons name="people" size={18} color="#16A34A" />
+              <View style={{ flex: 1 }}>
+                <Text style={s.localTitulo}>Associações e sindicatos</Text>
+                <Text style={s.localDesc}>
+                  Muitas associações de motoristas negociam descontos coletivos em postos. Vale
+                  pesquisar grupos regionais de motoristas para descobrir acordos locais.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <InfoBox tipo="dica">
+            {"Dica de ouro: compare o preço do litro com e sem desconto antes de abastecer.\n"}
+            {"Um posto 5% mais barato que fica no seu trajeto já é melhor do que um posto\n"}
+            {"com desconto de 10% que exige desvio de rota — o tempo também é dinheiro."}
+          </InfoBox>
+        </Secao>
+
         {/* ── Mais dicas em breve ── */}
         <AppCard style={[s.secao, { alignItems: "center", paddingVertical: 22 }]}>
           <Ionicons name="construct-outline" size={28} color={theme.colors.textMuted} />
