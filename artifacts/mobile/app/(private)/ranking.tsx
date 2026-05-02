@@ -185,17 +185,22 @@ function RankingCard({
         </View>
 
         <View style={styles.valorCol}>
-          <Text style={[styles.valorPrincipal, campo === "ganho_liquido" && { color: "#16A34A" }]} numberOfLines={1}>
+          <Text
+            style={[styles.valorPrincipal, campo === "ganho_liquido" && { color: "#16A34A" }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+          >
             {currencyEngine.formatar(valorPrincipal)}
           </Text>
-          <Text style={styles.valorLab}>{campoAtual.lab}</Text>
+          <Text style={styles.valorLab} numberOfLines={1}>{campoAtual.lab}</Text>
         </View>
 
         <Ionicons
           name={aberto ? "chevron-up" : "chevron-down"}
           size={14}
           color={theme.colors.textMuted}
-          style={{ marginLeft: 4 }}
+          style={{ marginLeft: 2 }}
         />
       </View>
 
@@ -280,7 +285,12 @@ export default function RankingScreen() {
       await sincronizar.mutateAsync({ filtro, refDate });
       showToast({ type: "success", message: "Ranking atualizado" });
     } catch (e: any) {
-      showToast({ type: "error", message: e?.message ?? "Não foi possível atualizar" });
+      const msg =
+        e?.message ??
+        (typeof e === "string" ? e : JSON.stringify(e ?? "erro desconhecido"));
+      const hint = e?.details ? ` (${e.details})` : e?.hint ? ` (${e.hint})` : "";
+      console.error("[Ranking] erro ao sincronizar:", e);
+      showToast({ type: "error", message: msg + hint });
     }
   };
 
@@ -555,8 +565,8 @@ const styles = StyleSheet.create({
   cardInfo: { flex: 1, marginLeft: 9, minWidth: 0, overflow: "hidden" },
   nome:    { ...theme.font.semibold, fontSize: 13, color: theme.colors.text },
   locTxt:  { ...theme.font.regular, fontSize: 10, color: theme.colors.textMuted, marginTop: 1 },
-  valorCol: { alignItems: "flex-end", marginLeft: 6, flexShrink: 0, maxWidth: 90 },
-  valorPrincipal: { ...theme.font.bold, fontSize: 13, color: theme.colors.text, textAlign: "right" },
+  valorCol: { alignItems: "flex-end", marginLeft: 6, flexShrink: 0, width: 96 },
+  valorPrincipal: { ...theme.font.bold, fontSize: 13, color: theme.colors.text, textAlign: "right", width: 96 },
   valorLab: { ...theme.font.regular, fontSize: 9, color: theme.colors.textMuted, marginTop: 1, textAlign: "right" },
 
   // ── Painel expandido ──
