@@ -7,6 +7,7 @@ import { dateEngine } from "@/engines/date-engine";
 import { currencyEngine } from "@/engines/currency-engine";
 import { useUI } from "@/hooks/UIContext";
 import { useAbastecimentos } from "@/hooks/useAbastecimentos";
+import { useJornadas } from "@/hooks/useJornadas";
 import { useAuth } from "@/hooks/AuthContext";
 import { useProtectedAction } from "@/hooks/useProtectedAction";
 import { TIPOS_COMBUSTIVEL } from "@/lib/constants";
@@ -21,6 +22,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AppKeyboardView } from "@/components/ui/AppKeyboardView";
 import { AppFooter } from "@/components/ui/AppFooter";
+import { AppProgressBar } from "@/components/ui/AppProgressBar";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -104,6 +106,7 @@ export default function Abastecimentos() {
   const { veiculo } = useAuth();
   const protect = useProtectedAction();
   const { list, ultimos30, valoresPadrao, create, update, remove } = useAbastecimentos();
+  const { list: todasJornadas } = useJornadas(); // sem filtro de mês → todas
 
   const isEletrico = veiculo?.tipo_tracao === "eletrico";
   const capacidadeBateriaKwh = veiculo?.bateria ?? 0;
@@ -272,6 +275,21 @@ export default function Abastecimentos() {
   const mediaPreco = comPreco.length > 0
     ? comPreco.reduce((s, a) => s + Number(a.preco_por_litro), 0) / comPreco.length
     : 0;
+
+  // ── Hodômetro: split trabalho / pessoal ─────────────────────────────────────
+  const hodometroInicial = Number(veiculo?.hodometro_inicial ?? 0);
+  const kmAtualVeiculo   = Number(veiculo?.km_atual ?? 0);
+  const kmTotalGeral     = Math.max(0, kmAtualVeiculo - hodometroInicial);
+  const kmTrabalhoTotal  = (todasJornadas.data ?? []).reduce(
+    (s, j) => s + (Number(j.km_percorrido) || 0), 0,
+  );
+  const temHodometro = kmTotalGeral > 0;
+  const pctTrabalho  = temHodometro
+    ? Math.min(100, Math.round((kmTrabalhoTotal / kmTotalGeral) * 100))
+    : 0;
+  const pctPessoal   = 100 - pctTrabalho;
+  const custoTrabalho = totalValor * (pctTrabalho / 100);
+  const custoPessoal  = totalValor * (pctPessoal  / 100);
 
   // ── Bloqueio seta direita ────────────────────────────────────────────────────
   const proximoBloqueado = isProximoBloqueado(periodo, refDate);
@@ -460,6 +478,47 @@ export default function Abastecimentos() {
         </View>
       </View>
 
+      {/* Card Trabalho vs Pessoal — só aparece se houver hodômetro cadastrado */}
+      {temHodometro && totalValor > 0 && (
+        <View style={{ paddingHorizontal: 14, marginBottom: 4 }}>
+          <AppCard style={styles.splitCard}>
+            <View style={styles.splitHeader}>
+              <Ionicons name="car-sport-outline" size={14} color={theme.colors.primary} />
+              <Text style={styles.splitTit}>Estimativa por uso</Text>
+              <View style={styles.splitBadge}>
+                <Text style={styles.splitBadgeTxt}>
+                  {pctTrabalho}% trabalho · {pctPessoal}% pessoal
+                </Text>
+              </View>
+            </View>
+
+            <AppProgressBar percentual={pctTrabalho} style={{ marginVertical: 10 }} />
+
+            <View style={styles.splitRow}>
+              <View style={styles.splitItem}>
+                <View style={[styles.splitDot, { backgroundColor: theme.colors.primary }]} />
+                <View>
+                  <Text style={styles.splitLab}>Trabalho</Text>
+                  <Text style={styles.splitVal}>{currencyEngine.formatar(custoTrabalho)}</Text>
+                </View>
+              </View>
+              <View style={styles.splitDivider} />
+              <View style={styles.splitItem}>
+                <View style={[styles.splitDot, { backgroundColor: theme.colors.textMuted }]} />
+                <View>
+                  <Text style={styles.splitLab}>Pessoal</Text>
+                  <Text style={styles.splitVal}>{currencyEngine.formatar(custoPessoal)}</Text>
+                </View>
+              </View>
+            </View>
+
+            <Text style={styles.splitNote}>
+              Baseado na proporção de km do hodômetro · {kmTrabalhoTotal.toFixed(0)} km trabalho de {kmTotalGeral.toFixed(0)} km total
+            </Text>
+          </AppCard>
+        </View>
+      )}
+
       {list.isLoading ? (
         <View style={{ padding: 40 }}><ActivityIndicator color={theme.colors.primary} /></View>
       ) : (
@@ -608,5 +667,25 @@ const styles = StyleSheet.create({
     position: "absolute", right: 22, bottom: 28,
     width: 60, height: 60, borderRadius: 30, backgroundColor: theme.colors.primary,
     justifyContent: "center", alignItems: "center", ...theme.shadow.card,
+  },
+
+  splitCard: { padding: 12 },
+  splitHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  splitTit: { ...theme.font.semibold, fontSize: 13, color: theme.colors.text, flex: 1 },
+  splitBadge: {
+    backgroundColor: theme.colors.primary + "15",
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: theme.radius.pill,
+  },
+  splitBadgeTxt: { ...theme.font.semibold, fontSize: 10, color: theme.colors.primary },
+  splitRow: { flexDirection: "row", alignItems: "center" },
+  splitItem: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+  splitDivider: { width: 1, height: 32, backgroundColor: theme.colors.divider, marginHorizontal: 8 },
+  splitDot: { width: 8, height: 8, borderRadius: 4 },
+  splitLab: { ...theme.font.regular, fontSize: 10, color: theme.colors.textMuted },
+  splitVal: { ...theme.font.bold, fontSize: 14, color: theme.colors.text },
+  splitNote: {
+    ...theme.font.regular, fontSize: 10, color: theme.colors.textMuted,
+    marginTop: 8, lineHeight: 14,
   },
 });
