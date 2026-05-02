@@ -40,6 +40,7 @@ const ITEMS: Item[] = [
   { label: "Configurações", icon: "settings", href: "/(private)/configuracoes" },
   { label: "Perfil", icon: "person", href: "/(private)/perfil" },
   { label: "Planos detalhados", icon: "star", href: "/(private)/planos" },
+  { label: "Dicas SOMA", icon: "bulb", href: "/(private)/dicas" },
   { label: "Dúvidas frequentes", icon: "help-circle", href: "/(private)/faq" },
   { label: "Termos de Uso", icon: "document-text", href: "/(public)/termos" },
   { label: "Sobre o SOMA", icon: "information-circle", href: "/(private)/sobre" },
