@@ -43,6 +43,7 @@ export interface CPMAData {
   ganhoPorCorrida: number;
   ganhoPorHora: number;
   ganhoRealPorHora: number;
+  ganhoRealPorDia: number;
 
   // Índices de custo e ganho
   custoPorHora: number;
@@ -202,6 +203,7 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         ganhoPorCorrida: corridas > 0 ? ganhoBruto / corridas : 0,
         ganhoPorHora: horas > 0 ? ganhoBruto / horas : 0,
         ganhoRealPorHora: horas > 0 ? ganhoReal / horas : 0,
+        ganhoRealPorDia: diasTrabalhados > 0 ? ganhoReal / diasTrabalhados : 0,
 
         custoPorHora: horas > 0 ? totalCustos / horas : 0,
         custoPorCorrida: corridas > 0 ? totalCustos / corridas : 0,

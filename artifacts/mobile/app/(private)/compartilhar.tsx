@@ -370,7 +370,7 @@ export default function CompartilharScreen() {
                 </>
               )}
 
-              {/* Médias */}
+              {/* Médias brutas */}
               {(data.ganhoPorCorrida > 0 || data.ganhoPorHora > 0 || data.ganhoPorKm > 0) && (
                 <>
                   <SecLabel>Médias</SecLabel>
@@ -393,6 +393,33 @@ export default function CompartilharScreen() {
                         <Text style={styles.mediaLbl}>por km</Text>
                       </View>
                     )}
+                  </View>
+                </>
+              )}
+
+              {/* Médias reais */}
+              {(data.ganhoRealPorHora !== 0 || data.ganhoPorKmReal !== 0 || data.ganhoRealPorDia !== 0) && (
+                <>
+                  <SecLabel>Médias Reais</SecLabel>
+                  <View style={styles.mediasRow}>
+                    <View style={styles.mediaItem}>
+                      <Text style={[styles.mediaVal, { color: data.ganhoRealPorHora >= 0 ? theme.colors.success : theme.colors.danger }]}>
+                        {data.ganhoRealPorHora !== 0 ? fmt(data.ganhoRealPorHora) : "—"}
+                      </Text>
+                      <Text style={styles.mediaLbl}>real / hora</Text>
+                    </View>
+                    <View style={styles.mediaItem}>
+                      <Text style={[styles.mediaVal, { color: data.ganhoPorKmReal >= 0 ? theme.colors.success : theme.colors.danger }]}>
+                        {data.ganhoPorKmReal !== 0 ? `R$ ${fmtN(data.ganhoPorKmReal, 2)}` : "—"}
+                      </Text>
+                      <Text style={styles.mediaLbl}>real / km</Text>
+                    </View>
+                    <View style={styles.mediaItem}>
+                      <Text style={[styles.mediaVal, { color: data.ganhoRealPorDia >= 0 ? theme.colors.success : theme.colors.danger }]}>
+                        {data.ganhoRealPorDia !== 0 ? fmt(data.ganhoRealPorDia) : "—"}
+                      </Text>
+                      <Text style={styles.mediaLbl}>real / dia</Text>
+                    </View>
                   </View>
                 </>
               )}
