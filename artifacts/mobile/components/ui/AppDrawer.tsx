@@ -22,7 +22,6 @@ const ITEMS: Item[] = [
   { label: "Painel", icon: "grid", href: "/(private)/dashboard" },
   { label: "Registrar Jornada", icon: "play-circle", href: "/(private)/registrar-jornada" },
   { label: "Minhas Jornadas", icon: "calendar", href: "/(private)/minhas-jornadas" },
-  { label: "Histórico GPS", icon: "navigate", href: "/(private)/historico-gps" },
   { label: "Ganhos por Plataforma", icon: "pie-chart", href: "/(private)/ganhos" },
   { label: "Meus Ganhos", icon: "cash", href: "/(private)/meus-ganhos" },
   { label: "Adicionar Despesa", icon: "remove-circle", href: "/(private)/despesas" },

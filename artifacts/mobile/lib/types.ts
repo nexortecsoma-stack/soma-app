@@ -271,6 +271,7 @@ export interface DashboardData {
   metaDiaria: number;
   percentualMetaDiaria: number;
   ganhoSemana: number;
+  lucroLiquidoSemana: number;
   ganhoSemanaAnterior: number;
   variacaoSemana: number;
   percentualSemana: number;

@@ -69,6 +69,13 @@ export const dashboardEngine = {
     const ganhoSemanaAnterior = financeiroEngine.totalGanhos(ganhosSemanaAnterior);
     const variacaoSemana = financeiroEngine.variacaoPercentual(ganhoSemana, ganhoSemanaAnterior);
 
+    const despesasSemanaArr = input.despesas.filter((dsp) => {
+      const d = dateEngine.parseISO(dsp.data_despesa);
+      return d >= inicioSemana && d <= fimSemana;
+    });
+    const despesasSemana = financeiroEngine.totalDespesas(despesasSemanaArr);
+    const lucroLiquidoSemana = ganhoSemana - despesasSemana;
+
     const inicioMes = dateEngine.primeiroDiaMes(input.mesReferencia);
     const fimMes = dateEngine.ultimoDiaMes(input.mesReferencia);
     const ganhosMes = input.ganhos.filter((g) => {
@@ -177,6 +184,7 @@ export const dashboardEngine = {
       metaDiariaAjustada: metaCalc.metaDiariaAjustada,
       percentualMetaDiaria,
       ganhoSemana,
+      lucroLiquidoSemana,
       ganhoSemanaAnterior,
       variacaoSemana,
       percentualSemana,

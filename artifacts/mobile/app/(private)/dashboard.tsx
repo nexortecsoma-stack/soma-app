@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -15,12 +15,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { dateEngine } from "@/engines/date-engine";
 import { currencyEngine } from "@/engines/currency-engine";
-import { jornadaEngine } from "@/engines/jornada-engine";
 import { useAuth } from "@/hooks/AuthContext";
 import { useUI } from "@/hooks/UIContext";
 import { useDashboard } from "@/hooks/useDashboard";
-import { useJornadas } from "@/hooks/useJornadas";
-import { useLocationTracking } from "@/hooks/useLocationTracking";
 import { AppHeader } from "@/components/ui/AppHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { AppBarChart } from "@/components/ui/AppBarChart";
@@ -31,54 +28,17 @@ import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
-  const { perfil, onboard, session } = useAuth();
-  const { openDrawer, showModal, hideModal, showToast } = useUI();
+  const { perfil, onboard } = useAuth();
+  const { openDrawer, showModal, hideModal } = useUI();
   const [mes, setMes] = useState(new Date());
   const [semanaOffset, setSemanaOffset] = useState(0);
-  const [tick, setTick] = useState(0);
   const { data, loading, refetching, refetch } = useDashboard(mes, semanaOffset);
-  const { ativa, iniciar, pausar, continuar, encerrar } = useJornadas();
-
-  const jornadaAtiva = ativa.data ?? null;
-  const tracking = useLocationTracking({
-    ativo: !!jornadaAtiva && jornadaAtiva.status === "ativa",
-    jornadaId: jornadaAtiva?.id ?? null,
-    profileId: session?.user?.id ?? null,
-  });
 
   useFocusEffect(
     React.useCallback(() => {
       void refetch();
     }, [refetch]),
   );
-
-  useEffect(() => {
-    if (!jornadaAtiva) return;
-    const t = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(t);
-  }, [!!jornadaAtiva]);
-
-  void tick;
-
-  const tempoCorrido = (() => {
-    if (!jornadaAtiva) return 0;
-    // Base em segundos (tempo_efetivo_minutos salvo no banco × 60)
-    let efetivo = (jornadaAtiva.tempo_efetivo_minutos || 0) * 60;
-    if (jornadaAtiva.status === "ativa" && jornadaAtiva.started_at) {
-      efetivo += Math.max(
-        0,
-        Math.floor((Date.now() - new Date(jornadaAtiva.started_at).getTime()) / 1000),
-      );
-    }
-    return efetivo;
-  })();
-
-  const nomeCompleto = perfil?.nome ?? perfil?.email?.split("@")[0] ?? "Motorista";
-  const primeiroNome = nomeCompleto.split(/[\s.]+/)[0] ?? "Motorista";
-  const nomeUsuario = primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase();
-
-  const irMesAnterior = () => { setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1)); setSemanaOffset(0); };
-  const irProxMes = () => { setMes(new Date(mes.getFullYear(), mes.getMonth() + 1, 1)); setSemanaOffset(0); };
 
   React.useEffect(() => {
     if (!onboard.completo && perfil) {
@@ -103,69 +63,12 @@ export default function DashboardScreen() {
     }
   }, [onboard.completo, perfil?.id]);
 
-  const onIniciar = () => {
-    iniciar.mutate(undefined, {
-      onSuccess: () => {
-        showToast({ type: "success", message: "Jornada iniciada" });
-        tracking.reset();
-      },
-      onError: () => showToast({ type: "error", message: "Erro ao iniciar jornada" }),
-    });
-  };
+  const nomeCompleto = perfil?.nome ?? perfil?.email?.split("@")[0] ?? "Motorista";
+  const primeiroNome = nomeCompleto.split(/[\s.]+/)[0] ?? "Motorista";
+  const nomeUsuario = primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase();
 
-  const onPausar = () => {
-    if (!jornadaAtiva) return;
-    pausar.mutate(jornadaAtiva, {
-      onSuccess: () => showToast({ type: "success", message: "Jornada pausada" }),
-      onError: () => showToast({ type: "error", message: "Erro ao pausar" }),
-    });
-  };
-
-  const onContinuar = () => {
-    if (!jornadaAtiva) return;
-    continuar.mutate(jornadaAtiva, {
-      onSuccess: () => showToast({ type: "success", message: "Jornada retomada" }),
-      onError: () => showToast({ type: "error", message: "Erro ao continuar" }),
-    });
-  };
-
-  const onEncerrar = () => {
-    if (!jornadaAtiva) return;
-    showModal({
-      type: "confirm",
-      title: "Encerrar jornada?",
-      message: `Tempo: ${jornadaEngine.formatarMinutos(Math.floor(tempoCorrido / 60))} · ${tracking.kmAcumulado.toFixed(2)} km. Confirmar encerramento?`,
-      confirmLabel: "Encerrar",
-      cancelLabel: "Continuar",
-      onConfirm: () => {
-        hideModal();
-        const kmFinal = tracking.kmAcumulado;
-        const jornadaSnapshot = jornadaAtiva;
-
-        // Encerra imediatamente — sem esperar pelo flush do background
-        encerrar.mutate(
-          { jornada: jornadaSnapshot, kmReal: kmFinal },
-          {
-            onSuccess: () => {
-              tracking.reset();
-              showToast({ type: "success", message: "Jornada encerrada" });
-              void refetch();
-            },
-            onError: (err) => {
-              console.error("[SOMA] Erro ao encerrar jornada:", err);
-              showToast({ type: "error", message: "Erro ao encerrar jornada" });
-            },
-          },
-        );
-
-        // Flush dos pontos de background em paralelo (não bloqueia o encerramento)
-        tracking.flushBackground(perfil?.id ?? "").catch((e: unknown) => {
-          console.warn("[SOMA] flushBackground falhou:", e);
-        });
-      },
-      onCancel: hideModal,
-    });
-  };
+  const irMesAnterior = () => { setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1)); setSemanaOffset(0); };
+  const irProxMes = () => { setMes(new Date(mes.getFullYear(), mes.getMonth() + 1, 1)); setSemanaOffset(0); };
 
   return (
     <View style={{ flex: 1 }}>
@@ -212,140 +115,30 @@ export default function DashboardScreen() {
               <KpiCard
                 titulo="Esta semana"
                 valor={data.ganhoSemana}
-                badge={`${data.variacaoSemana >= 0 ? "+" : ""}${data.variacaoSemana}% vs anterior`}
+                lucro={data.lucroLiquidoSemana}
                 gradient={theme.gradients.primary as readonly [string, string]}
                 icon="calendar"
               />
               <KpiCard
                 titulo="Este mês"
                 valor={data.ganhoMes}
-                badge={`${data.percentualMes}% da meta`}
+                lucro={data.ganhoMesLiquido}
                 gradient={theme.gradients.success as readonly [string, string]}
                 icon="trending-up"
               />
             </View>
 
-            {/* Bloco de Jornada */}
-            {ativa.isLoading ? (
-              <View style={styles.jornadaLoading}>
-                <ActivityIndicator color={theme.colors.primary} size="small" />
-                <Text style={styles.jornadaLoadingTxt}>Verificando jornada...</Text>
-              </View>
-            ) : jornadaAtiva ? (
-              /* Jornada ativa — contador ao vivo */
-              <AppCard style={styles.jornadaCard}>
-                <View style={styles.jornadaHeader}>
-                  <View style={styles.statusRow}>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        {
-                          backgroundColor:
-                            jornadaAtiva.status === "ativa"
-                              ? theme.colors.success
-                              : theme.colors.warning,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.statusTxt}>
-                      {jornadaAtiva.status === "ativa" ? "Jornada em andamento" : "Jornada pausada"}
-                    </Text>
-                  </View>
-                  {jornadaAtiva.started_at ? (
-                    <Text style={styles.inicioTxt}>
-                      Início:{" "}
-                      {new Date(jornadaAtiva.started_at).toLocaleTimeString("pt-BR").slice(0, 5)}
-                    </Text>
-                  ) : null}
-                </View>
-
-                <View style={styles.metricsRow}>
-                  <MetricBox
-                    icon="time-outline"
-                    label="Tempo efetivo"
-                    valor={jornadaEngine.formatarSegundos(tempoCorrido)}
-                    destaque
-                  />
-                  <MetricBox
-                    icon="navigate-outline"
-                    label="Km percorrido"
-                    valor={`${tracking.kmAcumulado.toFixed(2)} km`}
-                  />
-                </View>
-
-                <View style={styles.botoesJornada}>
-                  {jornadaAtiva.status === "ativa" ? (
-                    <Pressable
-                      style={[styles.btnJornada, styles.btnPausar]}
-                      onPress={onPausar}
-                      disabled={pausar.isPending}
-                    >
-                      {pausar.isPending ? (
-                        <ActivityIndicator size="small" color={theme.colors.warning} />
-                      ) : (
-                        <Ionicons name="pause" size={18} color={theme.colors.warning} />
-                      )}
-                      <Text style={[styles.btnJornadaTxt, { color: theme.colors.warning }]}>
-                        Pausar
-                      </Text>
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      style={[styles.btnJornada, styles.btnContinuar]}
-                      onPress={onContinuar}
-                      disabled={continuar.isPending}
-                    >
-                      {continuar.isPending ? (
-                        <ActivityIndicator size="small" color={theme.colors.primary} />
-                      ) : (
-                        <Ionicons name="play" size={18} color={theme.colors.primary} />
-                      )}
-                      <Text style={[styles.btnJornadaTxt, { color: theme.colors.primary }]}>
-                        Continuar
-                      </Text>
-                    </Pressable>
-                  )}
-                  <Pressable
-                    style={[styles.btnJornada, styles.btnEncerrar]}
-                    onPress={onEncerrar}
-                    disabled={encerrar.isPending}
-                  >
-                    {encerrar.isPending ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Ionicons name="stop" size={18} color="#fff" />
-                    )}
-                    <Text style={[styles.btnJornadaTxt, { color: "#fff" }]}>Encerrar</Text>
-                  </Pressable>
-                </View>
-              </AppCard>
-            ) : (
-              /* Sem jornada ativa — botão Iniciar */
-              <Pressable
-                style={styles.iniciarBtn}
-                onPress={onIniciar}
-                disabled={iniciar.isPending}
-              >
-                {iniciar.isPending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="play-circle" size={22} color="#fff" />
-                )}
-                <Text style={styles.iniciarTxt}>Iniciar Jornada</Text>
-              </Pressable>
-            )}
-
-            {/* Lançar jornada manual */}
+            {/* Botão Registrar Jornada */}
             <Pressable
-              style={styles.lancarBtn}
+              style={({ pressed }) => [styles.registrarBtn, pressed && { opacity: 0.88 }]}
               onPress={() => router.push("/(private)/registrar-jornada")}
             >
-              <Ionicons name="create-outline" size={16} color={theme.colors.primary} />
-              <Text style={styles.lancarTxt}>Lançar jornada manualmente</Text>
+              <Ionicons name="add-circle" size={22} color="#fff" />
+              <Text style={styles.registrarTxt}>Registrar Jornada</Text>
             </Pressable>
 
             {/* Meta do mês */}
-            <AppCard style={{ marginTop: 6 }}>
+            <AppCard style={{ marginTop: 14 }}>
               <Text style={styles.sectionTitle}>Meta do mês</Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
                 <Text style={styles.bigValue}>{currencyEngine.formatar(data.ganhoMes)}</Text>
@@ -471,13 +264,13 @@ export default function DashboardScreen() {
 function KpiCard({
   titulo,
   valor,
-  badge,
+  lucro,
   gradient,
   icon,
 }: {
   titulo: string;
   valor: number;
-  badge?: string;
+  lucro: number;
   gradient: readonly [string, string];
   icon: keyof typeof Ionicons.glyphMap;
 }) {
@@ -494,32 +287,13 @@ function KpiCard({
           <Text style={kpi.titulo}>{titulo}</Text>
         </View>
         <Text style={kpi.valor}>{currencyEngine.formatar(valor)}</Text>
-        {badge ? <Text style={kpi.badge}>{badge}</Text> : null}
+        <View style={kpi.lucroRow}>
+          <Ionicons name="leaf-outline" size={11} color="rgba(255,255,255,0.8)" />
+          <Text style={kpi.lucroBadge}>
+            Líquido: {currencyEngine.formatar(lucro)}
+          </Text>
+        </View>
       </LinearGradient>
-    </View>
-  );
-}
-
-function MetricBox({
-  icon,
-  label,
-  valor,
-  destaque,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  valor: string;
-  destaque?: boolean;
-}) {
-  return (
-    <View style={[metric.wrap, destaque && metric.destaqueWrap]}>
-      <Ionicons
-        name={icon}
-        size={18}
-        color={destaque ? theme.colors.primary : theme.colors.textMuted}
-      />
-      <Text style={metric.label}>{label}</Text>
-      <Text style={[metric.valor, destaque && { color: theme.colors.primary }]}>{valor}</Text>
     </View>
   );
 }
@@ -546,56 +320,7 @@ const styles = StyleSheet.create({
   },
   mesTxt: { ...theme.font.semibold, fontSize: 17, color: theme.colors.text },
   gridRow: { flexDirection: "row", gap: 10 },
-  jornadaLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-  },
-  jornadaLoadingTxt: {
-    ...theme.font.medium,
-    fontSize: 15,
-    color: theme.colors.textMuted,
-  },
-  jornadaCard: { marginTop: 12 },
-  jornadaHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  statusRow: { flexDirection: "row", alignItems: "center", gap: 7 },
-  statusDot: { width: 10, height: 10, borderRadius: 5 },
-  statusTxt: { ...theme.font.semibold, fontSize: 16, color: theme.colors.text },
-  inicioTxt: { ...theme.font.medium, fontSize: 14, color: theme.colors.textMuted },
-  metricsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
-  botoesJornada: { flexDirection: "row", gap: 10 },
-  btnJornada: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 11,
-    borderRadius: theme.radius.pill,
-    borderWidth: 1.5,
-  },
-  btnPausar: {
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warning + "15",
-  },
-  btnContinuar: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + "15",
-  },
-  btnEncerrar: {
-    borderColor: theme.colors.danger,
-    backgroundColor: theme.colors.danger,
-    flex: 1.4,
-  },
-  btnJornadaTxt: { ...theme.font.semibold, fontSize: 15 },
-  iniciarBtn: {
+  registrarBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -606,131 +331,46 @@ const styles = StyleSheet.create({
     marginTop: 12,
     ...theme.shadow.soft,
   },
-  iniciarTxt: { color: "#fff", ...theme.font.bold, fontSize: 18 },
-  lancarBtn: {
+  registrarTxt: { color: "#fff", ...theme.font.bold, fontSize: 18 },
+  sectionTitle: { ...theme.font.semibold, fontSize: 16, color: theme.colors.text, marginBottom: 10 },
+  bigValue: { ...theme.font.bold, fontSize: 22, color: theme.colors.text },
+  bigMuted: { ...theme.font.medium, fontSize: 16, color: theme.colors.textMuted, alignSelf: "flex-end", marginBottom: 2 },
+  metaSubRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
+  helperMt: { ...theme.font.regular, fontSize: 13, color: theme.colors.textMuted },
+  metaDiariaBadge: { alignItems: "flex-end" },
+  metaDiariaLab: { ...theme.font.regular, fontSize: 11, color: theme.colors.textMuted },
+  metaDiariaVal: { ...theme.font.semibold, fontSize: 14, color: theme.colors.text },
+  relBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
-    marginTop: 6,
-    marginBottom: 6,
+    paddingVertical: 12,
+    marginTop: 4,
   },
-  lancarTxt: {
-    color: theme.colors.primary,
-    ...theme.font.semibold,
-    fontSize: 15,
-  },
-  sectionTitle: {
-    ...theme.font.semibold,
-    fontSize: 16,
-    color: theme.colors.text,
-    marginBottom: 10,
-  },
-  relBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: theme.colors.primary + "12",
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.primary + "30",
-  },
-  relBtnTxt: {
-    flex: 1,
-    ...theme.font.semibold,
-    fontSize: 15,
-    color: theme.colors.primary,
-  },
-  bigValue: { ...theme.font.bold, fontSize: 22, color: theme.colors.text },
-  bigMuted: {
-    ...theme.font.medium,
-    fontSize: 16,
-    color: theme.colors.textMuted,
-    alignSelf: "flex-end",
-  },
-  metaSubRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginTop: 8,
-  },
-  helperMt: {
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    ...theme.font.regular,
-    flex: 1,
-  },
-  metaDiariaBadge: {
-    backgroundColor: theme.colors.primary + "15",
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    alignItems: "center",
-  },
-  metaDiariaLab: { fontSize: 12, color: theme.colors.primary, ...theme.font.medium },
-  metaDiariaVal: {
-    fontSize: 16,
-    color: theme.colors.primary,
-    ...theme.font.bold,
-    marginTop: 2,
-  },
-  legRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 14 },
-  legLabel: { fontSize: 13, color: theme.colors.textMuted, ...theme.font.medium },
-  legVal: { fontSize: 14, color: theme.colors.text, ...theme.font.semibold },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  linkSm: { color: theme.colors.primary, ...theme.font.semibold, fontSize: 14 },
-  jorRow: { flexDirection: "row", alignItems: "center", marginTop: 6 },
+  relBtnTxt: { color: theme.colors.primary, ...theme.font.medium, fontSize: 14 },
+  legRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.divider },
+  legLabel: { ...theme.font.regular, fontSize: 11, color: theme.colors.textMuted },
+  legVal: { ...theme.font.semibold, fontSize: 12, color: theme.colors.text, marginTop: 1 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  linkSm: { ...theme.font.medium, fontSize: 13, color: theme.colors.primary },
+  jorRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   jorIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: theme.colors.primary + "1A",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: theme.colors.primary + "20",
+    alignItems: "center", justifyContent: "center",
   },
-  jorTit: { ...theme.font.semibold, fontSize: 15, color: theme.colors.text },
-  jorSub: {
-    ...theme.font.regular,
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  jorVal: { ...theme.font.bold, fontSize: 17, color: theme.colors.success },
+  jorTit: { ...theme.font.semibold, fontSize: 14, color: theme.colors.text },
+  jorSub: { ...theme.font.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  jorVal: { ...theme.font.bold, fontSize: 15, color: theme.colors.text },
 });
 
 const kpi = StyleSheet.create({
-  wrap: { flex: 1, borderRadius: theme.radius.lg, overflow: "hidden", ...theme.shadow.soft },
-  bg: { padding: 14, minHeight: 110 },
-  row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  titulo: { color: "rgba(255,255,255,0.9)", ...theme.font.medium, fontSize: 14 },
-  valor: { color: "#fff", ...theme.font.bold, fontSize: 22, marginTop: 8 },
-  badge: {
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 13,
-    ...theme.font.medium,
-    marginTop: 6,
-  },
-});
-
-const metric = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    backgroundColor: theme.colors.surfaceMuted,
-    borderRadius: theme.radius.md,
-    padding: 12,
-    alignItems: "center",
-    gap: 4,
-  },
-  destaqueWrap: { backgroundColor: theme.colors.primary + "12" },
-  label: { fontSize: 13, color: theme.colors.textMuted, ...theme.font.medium },
-  valor: { fontSize: 20, ...theme.font.bold, color: theme.colors.text },
+  wrap: { flex: 1 },
+  bg: { borderRadius: theme.radius.card, padding: 14, minHeight: 110 },
+  row: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
+  titulo: { color: "rgba(255,255,255,0.85)", ...theme.font.medium, fontSize: 13 },
+  valor: { color: "#fff", ...theme.font.bold, fontSize: 20, marginBottom: 6 },
+  lucroRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  lucroBadge: { color: "rgba(255,255,255,0.85)", ...theme.font.medium, fontSize: 11 },
 });
