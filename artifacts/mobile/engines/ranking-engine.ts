@@ -55,6 +55,11 @@ export const rankingEngine = {
     periodoFim: Date;
   }): Omit<RankingSoma, "atualizado_em"> {
     const { perfil, veiculo, jornadas, ganhos, despesasTotal, custoFixoTotal, periodoInicio, periodoFim } = input;
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    const r4 = (n: number) => Math.round(n * 10000) / 10000;
+    const isoLocal = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
     const ganhoBruto = ganhos.reduce((s, g) => s + Number(g.valor || 0), 0);
     const ganhoLiquido = ganhoBruto - despesasTotal - custoFixoTotal;
     const totalMin = jornadas.reduce((s, j) => s + Number(j.tempo_efetivo_minutos || j.tempo_total_minutos || 0), 0);
@@ -63,30 +68,28 @@ export const rankingEngine = {
       (s, j) => s + Number(j.km_percorrido_real || j.km_percorrido || 0),
       0,
     );
-    // Quando o ganho líquido é negativo, R$/h e R$/km usam o bruto como base
-    // para evitar valores negativos sem sentido no ranking
     const baseHora = ganhoLiquido >= 0 ? ganhoLiquido : ganhoBruto;
-    const baseKm = ganhoLiquido >= 0 ? ganhoLiquido : ganhoBruto;
+    const baseKm   = ganhoLiquido >= 0 ? ganhoLiquido : ganhoBruto;
     const ganhoPorHora = horas > 0 ? Math.max(0, baseHora / horas) : 0;
-    const ganhoPorKm = km > 0 ? Math.max(0, baseKm / km) : 0;
+    const ganhoPorKm   = km   > 0 ? Math.max(0, baseKm   / km)   : 0;
     return {
       profile_id: perfil.id,
       nome_publico: perfil.nome_publico ?? perfil.nome ?? null,
       categoria: perfil.categoria,
       cidade: perfil.cidade,
       uf: perfil.uf,
-      ganho_bruto: Math.max(0, ganhoBruto),
-      ganho_liquido: ganhoLiquido,
-      ganho_por_hora: ganhoPorHora,
-      ganho_por_km: ganhoPorKm,
-      horas_trabalhadas: horas,
-      km_percorrido: km,
-      tipo_carro: veiculo?.tipo_propriedade ?? null,
-      tipo_tracao: veiculo?.tipo_tracao ?? perfil.tipo_tracao ?? null,
+      ganho_bruto:      r2(Math.max(0, ganhoBruto)),
+      ganho_liquido:    r2(ganhoLiquido),
+      ganho_por_hora:   r2(ganhoPorHora),
+      ganho_por_km:     r4(ganhoPorKm),
+      horas_trabalhadas: r2(horas),
+      km_percorrido:    r2(km),
+      tipo_carro:       veiculo?.tipo_propriedade ?? null,
+      tipo_tracao:      veiculo?.tipo_tracao ?? perfil.tipo_tracao ?? null,
       tipo_propriedade: veiculo?.tipo_propriedade ?? perfil.tipo_propriedade ?? null,
-      foto_url: perfil.foto_url ?? null,
-      periodo_inicio: periodoInicio.toISOString().split("T")[0] ?? null,
-      periodo_fim: periodoFim.toISOString().split("T")[0] ?? null,
+      foto_url:         perfil.foto_url ?? null,
+      periodo_inicio:   isoLocal(periodoInicio),
+      periodo_fim:      isoLocal(periodoFim),
     };
   },
 
