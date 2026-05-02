@@ -202,6 +202,7 @@ export default function DashboardScreen() {
                   data={data.rosca}
                   centroLabel="Líquido"
                   centroValor={data.ganhoMesLiquido}
+                  centroPercent={data.ganhoMes > 0 ? (data.ganhoMesLiquido / data.ganhoMes) * 100 : 0}
                 />
               )}
               <View style={styles.legRow}>

@@ -16,9 +16,17 @@ interface Props {
   strokeWidth?: number;
   centroLabel?: string;
   centroValor?: number;
+  centroPercent?: number;
 }
 
-export function AppDonutChart({ data, size = 170, strokeWidth = 22, centroLabel = "Total", centroValor }: Props) {
+export function AppDonutChart({
+  data,
+  size = 160,
+  strokeWidth = 22,
+  centroLabel = "Total",
+  centroValor,
+  centroPercent,
+}: Props) {
   const total = data.reduce((s, d) => s + d.valor, 0);
   const radius = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * radius;
@@ -26,8 +34,9 @@ export function AppDonutChart({ data, size = 170, strokeWidth = 22, centroLabel 
   const valorCentral = centroValor != null ? centroValor : total;
 
   return (
-    <View style={styles.row}>
-      <View style={{ width: size, height: size }}>
+    <View style={styles.container}>
+      {/* Rosca */}
+      <View style={{ width: size, height: size, alignSelf: "center" }}>
         <Svg width={size} height={size}>
           <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
             <Circle
@@ -62,11 +71,17 @@ export function AppDonutChart({ data, size = 170, strokeWidth = 22, centroLabel 
               : null}
           </G>
         </Svg>
+        {/* Centro */}
         <View style={[styles.center, { width: size, height: size }]}>
           <Text style={styles.centerLabel}>{centroLabel}</Text>
           <Text style={styles.centerValor}>{currencyEngine.formatar(valorCentral)}</Text>
+          {centroPercent != null && (
+            <Text style={styles.centerPct}>{centroPercent.toFixed(0)}%</Text>
+          )}
         </View>
       </View>
+
+      {/* Legenda em grid de 2 colunas */}
       <View style={styles.legenda}>
         {data.length === 0 ? (
           <Text style={styles.vazio}>Nenhum dado</Text>
@@ -76,11 +91,17 @@ export function AppDonutChart({ data, size = 170, strokeWidth = 22, centroLabel 
             return (
               <View key={i} style={styles.legendaItem}>
                 <View style={[styles.bullet, { backgroundColor: d.cor }]} />
-                <Text style={styles.legendaTxt} numberOfLines={1}>
-                  {legendaCategoria(d.categoria)}
-                </Text>
-                <Text style={styles.legendaPct}>{pct}%</Text>
-                <Text style={styles.legendaValor}>{currencyEngine.formatar(d.valor)}</Text>
+                <View style={styles.legendaTextos}>
+                  <View style={styles.legendaNomeRow}>
+                    <Text style={styles.legendaNome}>
+                      {legendaCategoria(d.categoria)}
+                    </Text>
+                    <Text style={styles.legendaPct}>{pct}%</Text>
+                  </View>
+                  <Text style={styles.legendaValor}>
+                    ({currencyEngine.formatar(d.valor)})
+                  </Text>
+                </View>
               </View>
             );
           })
@@ -106,15 +127,18 @@ function legendaCategoria(cat: string): string {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  container: { gap: 16 },
   center: { position: "absolute", justifyContent: "center", alignItems: "center" },
   centerLabel: { fontSize: 11, color: theme.colors.textMuted, ...theme.font.medium },
-  centerValor: { fontSize: 16, color: theme.colors.text, ...theme.font.bold, marginTop: 2 },
-  legenda: { flex: 1, marginLeft: 16 },
-  legendaItem: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  bullet: { width: 9, height: 9, borderRadius: 5, marginRight: 7 },
-  legendaTxt: { flex: 1, fontSize: 12, color: theme.colors.text, ...theme.font.regular },
-  legendaPct: { fontSize: 11, color: theme.colors.textMuted, ...theme.font.medium, marginRight: 6 },
-  legendaValor: { fontSize: 12, color: theme.colors.text, ...theme.font.semibold },
+  centerValor: { fontSize: 15, color: theme.colors.text, ...theme.font.bold, marginTop: 1 },
+  centerPct: { fontSize: 12, color: theme.colors.primary, ...theme.font.semibold, marginTop: 2 },
+  legenda: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  legendaItem: { flexDirection: "row", alignItems: "flex-start", width: "47%" },
+  bullet: { width: 9, height: 9, borderRadius: 5, marginRight: 6, marginTop: 3 },
+  legendaTextos: { flex: 1 },
+  legendaNomeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  legendaNome: { fontSize: 12, color: theme.colors.text, ...theme.font.medium, flexShrink: 1, marginRight: 4 },
+  legendaPct: { fontSize: 11, color: theme.colors.primary, ...theme.font.semibold },
+  legendaValor: { fontSize: 11, color: theme.colors.textMuted, ...theme.font.regular, marginTop: 1 },
   vazio: { color: theme.colors.textMuted, fontSize: 12, ...theme.font.regular },
 });
