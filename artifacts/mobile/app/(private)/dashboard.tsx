@@ -165,7 +165,10 @@ export default function DashboardScreen() {
 
             {/* Gráfico semanal */}
             <AppCard style={{ marginTop: 14 }}>
-              <Text style={styles.sectionTitle}>Ganhos por dia da semana</Text>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.sectionTitleNoMb}>Ganhos por dia da semana</Text>
+                <Text style={styles.cardBigVal}>{currencyEngine.formatar(data.ganhoSemana)}</Text>
+              </View>
               <AppBarChart
                 data={data.semanal.map((s) => ({
                   label: s.dia,
@@ -339,9 +342,23 @@ const styles = StyleSheet.create({
   bigMuted: { ...theme.font.medium, fontSize: 16, color: theme.colors.textMuted, alignSelf: "flex-end", marginBottom: 2 },
   metaSubRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
   helperMt: { ...theme.font.regular, fontSize: 13, color: theme.colors.textMuted },
-  metaDiariaBadge: { alignItems: "flex-end" },
-  metaDiariaLab: { ...theme.font.regular, fontSize: 11, color: theme.colors.textMuted },
-  metaDiariaVal: { ...theme.font.semibold, fontSize: 14, color: theme.colors.text },
+  metaDiariaBadge: {
+    backgroundColor: theme.colors.primary + "18",
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  metaDiariaLab: { ...theme.font.regular, fontSize: 10, color: theme.colors.primary },
+  metaDiariaVal: { ...theme.font.bold, fontSize: 15, color: theme.colors.primary },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  sectionTitleNoMb: { ...theme.font.semibold, fontSize: 15, color: theme.colors.text },
+  cardBigVal: { ...theme.font.bold, fontSize: 20, color: theme.colors.text },
   relBtn: {
     flexDirection: "row",
     alignItems: "center",

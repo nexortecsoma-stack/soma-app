@@ -16,14 +16,15 @@ interface Props {
   barColor?: string;
 }
 
-const LABEL_H = 34; // altura fixa da área de rótulos abaixo das barras
+const LABEL_H = 34;
+const PILL_H = 22; // espaço reservado para o label acima da linha
 
 export function AppBarChart({ data, altura = 160, onPrev, onNext, navLabel, barColor }: Props) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [chartW, setChartW] = useState(0);
 
   const max = Math.max(...data.map((d) => d.valor), 1);
-  const barAreaH = altura - LABEL_H; // altura da área de barras
+  const barAreaH = altura - LABEL_H;
 
   const pillValor =
     selectedIdx !== null && data[selectedIdx]
@@ -48,35 +49,38 @@ export function AppBarChart({ data, altura = 160, onPrev, onNext, navLabel, barC
         </View>
       )}
 
-      {/* Área total do gráfico */}
-      <View style={{ height: altura }} onLayout={handleLayout}>
+      {/* Área total = PILL_H (label acima) + barAreaH + LABEL_H */}
+      <View style={{ height: altura + PILL_H }} onLayout={handleLayout}>
 
-        {/* Linha pontilhada: top: 0 = topo exato das barras = nível da maior barra */}
+        {/* Valor acima da linha, à esquerda */}
+        {chartW > 0 && pillValor > 0 && (
+          <View style={styles.pillWrap} pointerEvents="none">
+            <View style={[styles.pill, { backgroundColor: activeColor }]}>
+              <Text style={styles.pillTxt}>
+                {`R$${currencyEngine.formatarNumero(pillValor, 0)}`}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Linha pontilhada logo abaixo do label (top = PILL_H) */}
         {chartW > 0 && (
-          <View
-            style={[styles.lineRow, { top: 0 }]}
-            pointerEvents="none"
-          >
-            <Svg height={2} width={chartW - 58} style={styles.svg}>
+          <View style={[styles.lineRow, { top: PILL_H }]} pointerEvents="none">
+            <Svg height={2} width={chartW}>
               <Line
                 x1={0} y1={1}
-                x2={chartW - 58} y2={1}
+                x2={chartW} y2={1}
                 stroke={activeColor}
                 strokeWidth={1.5}
                 strokeDasharray="5 4"
                 strokeOpacity={0.65}
               />
             </Svg>
-            <View style={[styles.pill, { backgroundColor: activeColor }]}>
-              <Text style={styles.pillTxt}>
-                {pillValor > 0 ? `R$${currencyEngine.formatarNumero(pillValor, 0)}` : ""}
-              </Text>
-            </View>
           </View>
         )}
 
-        {/* Área de barras: ocupa top:0 até bottom:LABEL_H */}
-        <View style={[styles.barArea, { height: barAreaH }]}>
+        {/* Barras: começam em top = PILL_H */}
+        <View style={[styles.barArea, { height: barAreaH, marginTop: PILL_H }]}>
           {data.map((d, i) => {
             const h = max > 0 ? Math.max(4, (d.valor / max) * barAreaH) : 4;
             const isSelected = selectedIdx === i;
@@ -91,14 +95,13 @@ export function AppBarChart({ data, altura = 160, onPrev, onNext, navLabel, barC
                 onPress={() => setSelectedIdx(isSelected ? null : i)}
                 hitSlop={4}
               >
-                {/* Barra crescendo a partir do fundo */}
                 <View style={[styles.bar, { height: h, backgroundColor: cor }]} />
               </Pressable>
             );
           })}
         </View>
 
-        {/* Área de rótulos: fixo na base */}
+        {/* Rótulos */}
         <View style={[styles.labelArea, { height: LABEL_H }]}>
           {data.map((d, i) => {
             const isSelected = selectedIdx === i;
@@ -135,27 +138,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   navLab: { ...theme.font.semibold, fontSize: 12, color: theme.colors.textMuted },
+  pillWrap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    zIndex: 3,
+  },
+  pill: {
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  pillTxt: { ...theme.font.bold, fontSize: 10, color: "#fff" },
   lineRow: {
     position: "absolute",
     left: 0,
     right: 0,
-    flexDirection: "row",
-    alignItems: "center",
     zIndex: 2,
   },
-  svg: { flex: 1 },
-  pill: {
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    marginLeft: 4,
-    minWidth: 48,
-    alignItems: "center",
-  },
-  pillTxt: { ...theme.font.bold, fontSize: 9, color: "#fff" },
   barArea: {
     flexDirection: "row",
-    alignItems: "flex-end", // barras crescem para cima a partir da base
+    alignItems: "flex-end",
   },
   barCol: {
     flex: 1,
@@ -163,7 +166,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     height: "100%",
   },
-  bar: { width: "65%", borderTopLeftRadius: 6, borderTopRightRadius: 6 },
+  bar: { width: "82%" },
   labelArea: {
     flexDirection: "row",
     alignItems: "flex-start",
