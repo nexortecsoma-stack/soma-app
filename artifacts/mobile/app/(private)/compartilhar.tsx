@@ -22,11 +22,68 @@ import { currencyEngine } from "@/engines/currency-engine";
 import { useAuth } from "@/hooks/AuthContext";
 import { useUI } from "@/hooks/UIContext";
 import { useCPMA } from "@/hooks/useCPMA";
+import type { FiltroPeriodo } from "@/engines/hodometro-engine";
 import { APP_FULL_NAME } from "@/lib/constants";
 
 // Largura de cada mini card dentro do card capturável
 // ScrollView padding: 16*2=32, cardBg padding: 20*2=40, gaps: 4*2=8
 const SHARE_W = Math.floor((Dimensions.get("window").width - 80) / 3);
+
+// ─── Helpers de período (mesmo padrão do CPMA) ────────────────────────────────
+
+const FILTROS: { id: FiltroPeriodo; label: string }[] = [
+  { id: "dia",    label: "Dia" },
+  { id: "semana", label: "Semana" },
+  { id: "mes",    label: "Mês" },
+  { id: "ano",    label: "Ano" },
+  { id: "todos",  label: "Tudo" },
+];
+
+function refInicial(filtro: FiltroPeriodo): Date {
+  const hoje = dateEngine.hoje();
+  if (filtro === "mes") return new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  if (filtro === "ano") return new Date(hoje.getFullYear(), 0, 1);
+  return hoje;
+}
+
+function navAnterior(filtro: FiltroPeriodo, ref: Date): Date {
+  if (filtro === "dia")    return dateEngine.somarDias(ref, -1);
+  if (filtro === "semana") return dateEngine.somarDias(dateEngine.inicioSemana(ref), -7);
+  if (filtro === "mes")    return new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+  if (filtro === "ano")    return new Date(ref.getFullYear() - 1, 0, 1);
+  return ref;
+}
+
+function navProximo(filtro: FiltroPeriodo, ref: Date): Date {
+  if (filtro === "dia")    return dateEngine.somarDias(ref, 1);
+  if (filtro === "semana") return dateEngine.somarDias(dateEngine.inicioSemana(ref), 7);
+  if (filtro === "mes")    return new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+  if (filtro === "ano")    return new Date(ref.getFullYear() + 1, 0, 1);
+  return ref;
+}
+
+function proximoBloqueado(filtro: FiltroPeriodo, ref: Date): boolean {
+  if (filtro === "todos") return true;
+  const hoje = dateEngine.hoje();
+  if (filtro === "dia")    return ref >= hoje;
+  if (filtro === "semana") return dateEngine.inicioSemana(ref) >= dateEngine.inicioSemana(hoje);
+  if (filtro === "mes")    return ref.getFullYear() >= hoje.getFullYear() && ref.getMonth() >= hoje.getMonth();
+  if (filtro === "ano")    return ref.getFullYear() >= hoje.getFullYear();
+  return false;
+}
+
+function labelPeriodo(filtro: FiltroPeriodo, ref: Date): string {
+  if (filtro === "todos")  return "Todos os registros";
+  if (filtro === "dia")    return dateEngine.formatarBR(ref);
+  if (filtro === "semana") {
+    const ini = dateEngine.inicioSemana(ref);
+    const fim = dateEngine.fimSemana(ref);
+    return `${dateEngine.formatarBR(ini)} – ${dateEngine.formatarBR(fim)}`;
+  }
+  if (filtro === "mes") return dateEngine.formatarMesAno(ref);
+  if (filtro === "ano") return String(ref.getFullYear());
+  return "";
+}
 
 // ─── Utilitário ───────────────────────────────────────────────────────────────
 
@@ -92,12 +149,18 @@ export default function CompartilharScreen() {
   const viewShotRef = useRef<ViewShot>(null);
   const [capturing, setCapturing] = useState(false);
 
-  // Período: mês atual fixo
-  const hoje = dateEngine.hoje();
-  const refDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const mesLabel = dateEngine.formatarMesAno(refDate);
+  const [filtro, setFiltro] = useState<FiltroPeriodo>("mes");
+  const [refDate, setRefDate] = useState<Date>(() => refInicial("mes"));
 
-  const { data, isLoading, isFetching, refetch } = useCPMA("mes", refDate);
+  const mudarFiltro = (novo: FiltroPeriodo) => {
+    setFiltro(novo);
+    setRefDate(refInicial(novo));
+  };
+
+  const bloqueado = proximoBloqueado(filtro, refDate);
+  const periodoLabel = labelPeriodo(filtro, refDate);
+
+  const { data, isLoading, isFetching, refetch } = useCPMA(filtro, refDate);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -177,6 +240,41 @@ export default function CompartilharScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Chips de período ───────────────────────────────────────────── */}
+        <View style={styles.chipsRow}>
+          {FILTROS.map((f) => (
+            <Pressable
+              key={f.id}
+              style={[styles.chip, filtro === f.id && styles.chipActive]}
+              onPress={() => mudarFiltro(f.id)}
+            >
+              <Text style={[styles.chipTxt, filtro === f.id && styles.chipTxtActive]}>
+                {f.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* ── Navegação de período ────────────────────────────────────────── */}
+        <View style={styles.navRow}>
+          {filtro !== "todos" ? (
+            <Pressable onPress={() => setRefDate(navAnterior(filtro, refDate))} hitSlop={12} style={styles.navBtn}>
+              <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
+            </Pressable>
+          ) : <View style={styles.navBtn} />}
+          <Text style={styles.navLabel}>{periodoLabel}</Text>
+          {filtro !== "todos" ? (
+            <Pressable
+              onPress={() => !bloqueado && setRefDate(navProximo(filtro, refDate))}
+              hitSlop={12}
+              style={[styles.navBtn, bloqueado && { opacity: 0.25 }]}
+              disabled={bloqueado}
+            >
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+            </Pressable>
+          ) : <View style={styles.navBtn} />}
+        </View>
+
         {/* ── Card capturável ────────────────────────────────────────────── */}
         <ViewShot
           ref={viewShotRef}
@@ -200,7 +298,7 @@ export default function CompartilharScreen() {
                 <Text style={styles.imgFullName} numberOfLines={2}>{APP_FULL_NAME}</Text>
               </View>
               <View style={styles.mesLabel}>
-                <Text style={styles.mesLabelTxt}>{mesLabel}</Text>
+                <Text style={styles.mesLabelTxt}>{periodoLabel}</Text>
               </View>
             </View>
 
@@ -354,6 +452,55 @@ const styles = StyleSheet.create({
     ...theme.font.medium,
     fontSize: 13,
     color: theme.colors.textMuted,
+  },
+
+  // Chips de período
+  chipsRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  chipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  chipTxt: {
+    ...theme.font.medium,
+    fontSize: 13,
+    color: theme.colors.textMuted,
+  },
+  chipTxtActive: {
+    color: "#fff",
+  },
+
+  // Navegação de período
+  navRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  navBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navLabel: {
+    ...theme.font.semibold,
+    fontSize: 14,
+    color: theme.colors.text,
+    flex: 1,
+    textAlign: "center",
   },
 
   // Card
