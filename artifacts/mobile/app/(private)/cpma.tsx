@@ -85,32 +85,31 @@ function MiniCard({
   value,
   color,
   pct,
-  sub,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   color: string;
   pct?: number;
-  sub?: string;
 }) {
   return (
-    <View style={[mini.card, { borderTopColor: color }]}>
-      <View style={mini.topRow}>
+    <View style={[mini.card, { borderLeftColor: color }]}>
+      {/* ícone + título lado a lado */}
+      <View style={mini.headerRow}>
         <View style={[mini.iconWrap, { backgroundColor: color + "1F" }]}>
-          <Ionicons name={icon} size={13} color={color} />
+          <Ionicons name={icon} size={11} color={color} />
         </View>
+        <Text style={mini.label} numberOfLines={1}>{label}</Text>
+      </View>
+      {/* valor + % na mesma linha */}
+      <View style={mini.valueRow}>
+        <Text style={[mini.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
         {pct !== undefined && (
-          <View style={[mini.pctBadge, { backgroundColor: color + "22" }]}>
-            <Text style={[mini.pctTxt, { color }]}>{pct}%</Text>
-          </View>
+          <Text style={[mini.pct, { color }]}> {pct}%</Text>
         )}
       </View>
-      <Text style={[mini.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
-      <Text style={mini.label} numberOfLines={2}>{label}</Text>
-      {sub ? <Text style={mini.sub}>{sub}</Text> : null}
     </View>
   );
 }
@@ -180,7 +179,7 @@ export default function CPMAScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: 12, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ padding: 8, paddingBottom: insets.bottom + 80 }}
         refreshControl={
           <RefreshControl
             refreshing={isFetching && !isLoading}
@@ -284,7 +283,6 @@ export default function CPMAScreen() {
                 label="Custo Combustível"
                 value={fmt(data.custoCombustivel)}
                 color={theme.colors.warning}
-                sub="estimado"
               />
             </View>
             <View style={styles.grid}>
@@ -293,7 +291,6 @@ export default function CPMAScreen() {
                 label="Custo Fixo"
                 value={fmt(data.custoFixo)}
                 color={theme.colors.purple}
-                sub="proporcional"
               />
               <View style={mini.cardEmpty} />
               <View style={mini.cardEmpty} />
@@ -315,7 +312,6 @@ export default function CPMAScreen() {
                 label="KM Pessoal"
                 value={data.kmPessoal != null ? fmtKm(data.kmPessoal) : "—"}
                 color={theme.colors.indigo}
-                sub={data.kmPessoal == null ? "filtro: Tudo" : undefined}
               />
               <MiniCard
                 icon="time"
@@ -400,7 +396,6 @@ export default function CPMAScreen() {
                 label="Ganho / km Real"
                 value={data.ganhoPorKmReal !== 0 ? `R$ ${fmtN(data.ganhoPorKmReal, 2)}` : "—"}
                 color={data.ganhoPorKmReal >= 0 ? theme.colors.success : theme.colors.danger}
-                sub="após todos os custos"
               />
               <View style={mini.cardEmpty} />
               <View style={mini.cardEmpty} />
@@ -474,12 +469,12 @@ function VeiculoRow({
 const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: "row",
-    gap: 5,
-    marginBottom: 8,
+    gap: 4,
+    marginBottom: 6,
   },
   chip: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: theme.radius.pill,
     alignItems: "center",
     backgroundColor: "#fff",
@@ -504,9 +499,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: theme.radius.md,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 14,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    marginBottom: 8,
     ...theme.shadow.soft,
   },
   navBtn: { width: 32, alignItems: "center" },
@@ -525,16 +520,16 @@ const styles = StyleSheet.create({
   },
   grid: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 8,
+    gap: 4,
+    marginBottom: 4,
   },
   veiculoCard: {
     backgroundColor: "#fff",
-    borderRadius: theme.radius.lg,
-    padding: 14,
-    gap: 10,
+    borderRadius: theme.radius.md,
+    padding: 10,
+    gap: 7,
     ...theme.shadow.soft,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   shareBtn: {
     flexDirection: "row",
@@ -558,57 +553,49 @@ const mini = StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: "#fff",
-    borderRadius: theme.radius.md,
-    padding: 10,
-    borderTopWidth: 3,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
+    borderLeftWidth: 3,
     ...theme.shadow.soft,
-    minHeight: 90,
-    justifyContent: "space-between",
   },
   cardEmpty: {
     flex: 1,
     backgroundColor: "transparent",
   },
-  topRow: {
+  headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    gap: 4,
+    marginBottom: 3,
   },
   iconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
   },
-  pctBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  pctTxt: {
-    fontSize: 10,
-    ...theme.font.bold,
+  valueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
   },
   value: {
     ...theme.font.bold,
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 16,
+  },
+  pct: {
+    ...theme.font.medium,
+    fontSize: 9,
+    opacity: 0.85,
   },
   label: {
-    ...theme.font.regular,
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    marginTop: 3,
-    lineHeight: 13,
-  },
-  sub: {
+    flex: 1,
     ...theme.font.regular,
     fontSize: 9,
-    color: theme.colors.textSubtle,
-    marginTop: 1,
-    fontStyle: "italic",
+    color: theme.colors.textMuted,
+    lineHeight: 11,
   },
 });
 
@@ -616,9 +603,9 @@ const sec = StyleSheet.create({
   wrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-    marginTop: 4,
+    gap: 6,
+    marginBottom: 4,
+    marginTop: 6,
   },
   line: {
     flex: 1,
