@@ -15,32 +15,37 @@ export interface CPMAData {
   pctLiquido: number;
   pctReal: number;
 
-  // Custos
+  // Custos (pctCombustivel/pctCustoFixo com 1 decimal)
   totalCustos: number;
   custoCombustivel: number;
   custoFixo: number;
   pctCustos: number;
+  pctCombustivel: number;
+  pctCustoFixo: number;
 
-  // Despesas variáveis individuais (agrupadas por categoria)
-  despesasItems: Array<{ nome: string; valor: number }>;
+  // Despesas variáveis individuais (agrupadas por categoria, pct com 1 decimal)
+  despesasItems: Array<{ nome: string; valor: number; pct: number }>;
 
-  // Quilometragem
+  // Quilometragem e tempo
   kmTrabalho: number;
   kmPessoal: number | null;
+  horas: number;
 
   // Corridas e jornadas
   corridas: number;
   diasTrabalhados: number;
-  horas: number;
   corridasPorHora: number;
+
+  // Médias
+  ganhoPorDia: number;
   ganhoPorHora: number;
-  custoPorHora: number;
   ganhoPorCorrida: number;
   kmPorCorrida: number;
 
-  // Ratios por km
-  custoPorKm: number;
+  // Índices de custo e ganho
+  custoPorHora: number;
   custoPorCorrida: number;
+  custoPorKm: number;
   ganhoPorKm: number;
   ganhoPorKmReal: number;
 }
@@ -103,7 +108,8 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         const nome = d.categoria_personalizada?.trim() || d.categoria;
         despesasMap.set(nome, (despesasMap.get(nome) ?? 0) + (Number(d.valor) || 0));
       }
-      const despesasItems = Array.from(despesasMap.entries())
+      // pct calculado depois que ganhoBruto está disponível — usa closure de pct1
+      const despesasItemsRaw = Array.from(despesasMap.entries())
         .map(([nome, valor]) => ({ nome, valor }))
         .sort((a, b) => b.valor - a.valor);
       const kmTrabalho = raw.jornadas.reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
@@ -139,6 +145,8 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
 
       const pct = (n: number) =>
         ganhoBruto > 0 ? Math.max(-999, Math.round((n / ganhoBruto) * 100)) : 0;
+      const pct1 = (n: number) =>
+        ganhoBruto > 0 ? Math.round((n / ganhoBruto) * 1000) / 10 : 0;
 
       // ── KM pessoal via hodometroEngine (usa hodômetro real da última conferência) ──
       let kmPessoal: number | null = null;
@@ -158,6 +166,11 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         kmPessoal = resumo.periodo.kmPessoal;
       }
 
+      const despesasItems = despesasItemsRaw.map((i) => ({
+        ...i,
+        pct: pct1(i.valor),
+      }));
+
       return {
         ganhoBruto,
         ganhoLiquido,
@@ -169,22 +182,26 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         custoCombustivel,
         custoFixo,
         pctCustos: pct(totalCustos),
+        pctCombustivel: pct1(custoCombustivel),
+        pctCustoFixo: pct1(custoFixo),
         despesasItems,
 
         kmTrabalho,
         kmPessoal,
+        horas,
 
         corridas,
         diasTrabalhados,
-        horas,
         corridasPorHora: horas > 0 ? corridas / horas : 0,
+
+        ganhoPorDia: diasTrabalhados > 0 ? ganhoBruto / diasTrabalhados : 0,
         ganhoPorHora: horas > 0 ? ganhoBruto / horas : 0,
-        custoPorHora: horas > 0 ? totalCustos / horas : 0,
         ganhoPorCorrida: corridas > 0 ? ganhoBruto / corridas : 0,
         kmPorCorrida: corridas > 0 ? kmTrabalho / corridas : 0,
 
-        custoPorKm: kmTrabalho > 0 ? totalCustos / kmTrabalho : 0,
+        custoPorHora: horas > 0 ? totalCustos / horas : 0,
         custoPorCorrida: corridas > 0 ? totalCustos / corridas : 0,
+        custoPorKm: kmTrabalho > 0 ? totalCustos / kmTrabalho : 0,
         ganhoPorKm: kmTrabalho > 0 ? ganhoBruto / kmTrabalho : 0,
         ganhoPorKmReal: kmTrabalho > 0 ? ganhoReal / kmTrabalho : 0,
       };

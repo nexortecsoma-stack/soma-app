@@ -290,12 +290,14 @@ export default function CPMAScreen() {
                 label="Combustível"
                 value={fmt(data.custoCombustivel)}
                 color={theme.colors.warning}
+                pct={data.pctCombustivel}
               />
               <MiniCard
                 icon="wallet"
                 label="Custo Fixo"
                 value={fmt(data.custoFixo)}
                 color={theme.colors.purple}
+                pct={data.pctCustoFixo}
               />
             </View>
 
@@ -312,6 +314,7 @@ export default function CPMAScreen() {
                         label={item.nome}
                         value={fmt(item.valor)}
                         color={theme.colors.orange}
+                        pct={item.pct}
                       />
                     ))}
                     {row.length === 2 && <View style={mini.cardEmpty} />}
@@ -327,21 +330,15 @@ export default function CPMAScreen() {
             )}
 
             {/* ════════════════════════════════════════════════════════════════
-                QUILOMETRAGEM
+                ATIVIDADE
             ════════════════════════════════════════════════════════════════ */}
-            <SectionLabel>Quilometragem</SectionLabel>
+            <SectionLabel>Atividade</SectionLabel>
             <View style={styles.grid}>
               <MiniCard
                 icon="car"
-                label="KM Trabalho"
+                label="KM Trabalhado"
                 value={data.kmTrabalho > 0 ? fmtKm(data.kmTrabalho) : "—"}
                 color={theme.colors.primary}
-              />
-              <MiniCard
-                icon="home"
-                label="KM Pessoal"
-                value={data.kmPessoal != null ? fmtKm(data.kmPessoal) : "—"}
-                color={theme.colors.indigo}
               />
               <MiniCard
                 icon="time"
@@ -349,13 +346,20 @@ export default function CPMAScreen() {
                 value={data.horas > 0 ? fmtH(data.horas) : "—"}
                 color={theme.colors.accent}
               />
+              <MiniCard
+                icon="home"
+                label="KM Pessoal"
+                value={data.kmPessoal != null ? fmtKm(data.kmPessoal) : "—"}
+                color={theme.colors.indigo}
+              />
             </View>
-
-            {/* ════════════════════════════════════════════════════════════════
-                CORRIDAS E JORNADAS
-            ════════════════════════════════════════════════════════════════ */}
-            <SectionLabel>Corridas e Jornadas</SectionLabel>
             <View style={styles.grid}>
+              <MiniCard
+                icon="sunny"
+                label="Dias Trab."
+                value={String(data.diasTrabalhados)}
+                color={theme.colors.success}
+              />
               <MiniCard
                 icon="navigate"
                 label="Corridas"
@@ -363,58 +367,57 @@ export default function CPMAScreen() {
                 color={theme.colors.primary}
               />
               <MiniCard
-                icon="sunny"
-                label="Dias Trab."
-                value={String(data.diasTrabalhados)}
-                color={theme.colors.success}
-              />
-              <View style={mini.cardEmpty} />
-            </View>
-            <View style={styles.grid}>
-              <MiniCard
                 icon="timer"
                 label="Corridas / hora"
                 value={data.corridasPorHora > 0 ? fmtN(data.corridasPorHora) : "—"}
                 color={theme.colors.warning}
               />
+            </View>
+
+            {/* ════════════════════════════════════════════════════════════════
+                MÉDIAS
+            ════════════════════════════════════════════════════════════════ */}
+            <SectionLabel>Médias</SectionLabel>
+            <View style={styles.grid}>
+              <MiniCard
+                icon="calendar"
+                label="Ganho / dia"
+                value={data.ganhoPorDia > 0 ? fmt(data.ganhoPorDia) : "—"}
+                color={theme.colors.primary}
+              />
               <MiniCard
                 icon="trending-up"
                 label="Ganho / hora"
                 value={data.ganhoPorHora > 0 ? fmt(data.ganhoPorHora) : "—"}
-                color={theme.colors.primary}
+                color={theme.colors.success}
               />
-              <MiniCard
-                icon="trending-down"
-                label="Custo / hora"
-                value={data.custoPorHora > 0 ? fmt(data.custoPorHora) : "—"}
-                color={theme.colors.danger}
-              />
-            </View>
-            <View style={styles.grid}>
               <MiniCard
                 icon="cash-outline"
                 label="Ganho / corrida"
                 value={data.ganhoPorCorrida > 0 ? fmt(data.ganhoPorCorrida) : "—"}
-                color={theme.colors.success}
+                color={theme.colors.accent}
               />
+            </View>
+            <View style={styles.grid}>
               <MiniCard
                 icon="speedometer-outline"
                 label="KM / corrida"
                 value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"}
-                color={theme.colors.accent}
+                color={theme.colors.indigo}
               />
+              <View style={mini.cardEmpty} />
               <View style={mini.cardEmpty} />
             </View>
 
             {/* ════════════════════════════════════════════════════════════════
-                RATIOS POR KM E CORRIDA
+                ÍNDICES
             ════════════════════════════════════════════════════════════════ */}
-            <SectionLabel>Índices por KM e Corrida</SectionLabel>
+            <SectionLabel>Índices</SectionLabel>
             <View style={styles.grid}>
               <MiniCard
                 icon="trending-down"
-                label="Custo / km"
-                value={data.custoPorKm > 0 ? `R$ ${fmtN(data.custoPorKm, 2)}` : "—"}
+                label="Custo / hora"
+                value={data.custoPorHora > 0 ? fmt(data.custoPorHora) : "—"}
                 color={theme.colors.danger}
               />
               <MiniCard
@@ -424,20 +427,25 @@ export default function CPMAScreen() {
                 color={theme.colors.orange}
               />
               <MiniCard
+                icon="analytics"
+                label="Custo / km"
+                value={data.custoPorKm > 0 ? `R$ ${fmtN(data.custoPorKm, 2)}` : "—"}
+                color={theme.colors.warning}
+              />
+            </View>
+            <View style={styles.grid}>
+              <MiniCard
                 icon="add-circle"
                 label="Ganho / km"
                 value={data.ganhoPorKm > 0 ? `R$ ${fmtN(data.ganhoPorKm, 2)}` : "—"}
                 color={theme.colors.primary}
               />
-            </View>
-            <View style={styles.grid}>
               <MiniCard
                 icon="leaf-outline"
                 label="Ganho real / km"
                 value={data.ganhoPorKmReal !== 0 ? `R$ ${fmtN(data.ganhoPorKmReal, 2)}` : "—"}
                 color={data.ganhoPorKmReal >= 0 ? theme.colors.success : theme.colors.danger}
               />
-              <View style={mini.cardEmpty} />
               <View style={mini.cardEmpty} />
             </View>
 
