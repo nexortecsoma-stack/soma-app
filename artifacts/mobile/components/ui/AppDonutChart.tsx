@@ -21,7 +21,7 @@ interface Props {
 
 export function AppDonutChart({
   data,
-  size = 160,
+  size = 150,
   strokeWidth = 22,
   centroLabel = "Total",
   centroValor,
@@ -34,9 +34,9 @@ export function AppDonutChart({
   const valorCentral = centroValor != null ? centroValor : total;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.row}>
       {/* Rosca */}
-      <View style={{ width: size, height: size, alignSelf: "center" }}>
+      <View style={{ width: size, height: size }}>
         <Svg width={size} height={size}>
           <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
             <Circle
@@ -81,7 +81,7 @@ export function AppDonutChart({
         </View>
       </View>
 
-      {/* Legenda em grid de 2 colunas */}
+      {/* Legenda ao lado */}
       <View style={styles.legenda}>
         {data.length === 0 ? (
           <Text style={styles.vazio}>Nenhum dado</Text>
@@ -96,7 +96,7 @@ export function AppDonutChart({
                     <Text style={styles.legendaNome}>
                       {legendaCategoria(d.categoria)}
                     </Text>
-                    <Text style={styles.legendaPct}>{pct}%</Text>
+                    <Text style={[styles.legendaPct, { color: d.cor }]}>{pct}%</Text>
                   </View>
                   <Text style={styles.legendaValor}>
                     ({currencyEngine.formatar(d.valor)})
@@ -118,7 +118,7 @@ function legendaCategoria(cat: string): string {
     limpeza: "Limpeza",
     alimentacao: "Alimentação",
     multa: "Multa",
-    estacionamento: "Estacionamento",
+    estacionamento: "Estacion.",
     internet: "Internet",
     manutencao: "Manutenção",
     outros: "Outros",
@@ -127,18 +127,18 @@ function legendaCategoria(cat: string): string {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 16 },
+  row: { flexDirection: "row", alignItems: "center" },
   center: { position: "absolute", justifyContent: "center", alignItems: "center" },
-  centerLabel: { fontSize: 11, color: theme.colors.textMuted, ...theme.font.medium },
-  centerValor: { fontSize: 15, color: theme.colors.text, ...theme.font.bold, marginTop: 1 },
-  centerPct: { fontSize: 12, color: theme.colors.primary, ...theme.font.semibold, marginTop: 2 },
-  legenda: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  legendaItem: { flexDirection: "row", alignItems: "flex-start", width: "47%" },
-  bullet: { width: 9, height: 9, borderRadius: 5, marginRight: 6, marginTop: 3 },
+  centerLabel: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.medium },
+  centerValor: { fontSize: 13, color: theme.colors.text, ...theme.font.bold, marginTop: 1 },
+  centerPct: { fontSize: 13, color: theme.colors.primary, ...theme.font.bold, marginTop: 1 },
+  legenda: { flex: 1, marginLeft: 14, gap: 7 },
+  legendaItem: { flexDirection: "row", alignItems: "flex-start" },
+  bullet: { width: 8, height: 8, borderRadius: 4, marginRight: 6, marginTop: 3, flexShrink: 0 },
   legendaTextos: { flex: 1 },
   legendaNomeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  legendaNome: { fontSize: 12, color: theme.colors.text, ...theme.font.medium, flexShrink: 1, marginRight: 4 },
-  legendaPct: { fontSize: 11, color: theme.colors.primary, ...theme.font.semibold },
-  legendaValor: { fontSize: 11, color: theme.colors.textMuted, ...theme.font.regular, marginTop: 1 },
+  legendaNome: { fontSize: 11, color: theme.colors.text, ...theme.font.medium, flexShrink: 1, marginRight: 2 },
+  legendaPct: { fontSize: 11, ...theme.font.bold, flexShrink: 0 },
+  legendaValor: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.regular, marginTop: 1 },
   vazio: { color: theme.colors.textMuted, fontSize: 12, ...theme.font.regular },
 });

@@ -24,7 +24,6 @@ export function AppCalendar({ value, onChange, marcadores = [], maxDate }: Props
 
   const ano = mes.getFullYear();
   const nomeMes = dateEngine.mes(mes);
-
   const podeAvancar = !maxDate || mes < new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
 
   return (
@@ -47,13 +46,13 @@ export function AppCalendar({ value, onChange, marcadores = [], maxDate }: Props
           <Ionicons name="chevron-forward" size={20} color={theme.colors.text} />
         </Pressable>
       </View>
+
       <View style={styles.weekRow}>
         {dateEngine.diasSemanaCurtos().map((d) => (
-          <Text key={d} style={styles.weekTxt}>
-            {d}
-          </Text>
+          <Text key={d} style={styles.weekTxt}>{d}</Text>
         ))}
       </View>
+
       <View style={styles.grid}>
         {dias.map((d, idx) => {
           if (!d) return <View key={`v-${idx}`} style={styles.cell} />;
@@ -61,17 +60,37 @@ export function AppCalendar({ value, onChange, marcadores = [], maxDate }: Props
           const isSelected = iso === valorISO;
           const marcCor = marcadoresMap[iso];
           const isFuture = maxDate ? d > maxDate : false;
+
+          const cellBg = isSelected
+            ? theme.colors.primary
+            : marcCor
+              ? marcCor + "30"
+              : undefined;
+
+          const leftBorderColor = !isSelected && marcCor ? marcCor : "transparent";
+
           return (
             <Pressable
               key={iso}
               disabled={isFuture}
               onPress={() => onChange(d)}
-              style={[styles.cell, isSelected && styles.cellAtivo]}
+              style={[
+                styles.cell,
+                cellBg ? { backgroundColor: cellBg } : undefined,
+                !isSelected && marcCor ? { borderLeftWidth: 2, borderLeftColor: leftBorderColor, borderRadius: 6 } : undefined,
+                isSelected ? styles.cellAtivo : undefined,
+              ]}
             >
-              <Text style={[styles.dayTxt, isSelected && styles.dayTxtAtivo, isFuture && styles.dayTxtMuted]}>
+              <Text
+                style={[
+                  styles.dayTxt,
+                  isSelected && styles.dayTxtAtivo,
+                  !isSelected && marcCor && { color: theme.colors.text, ...theme.font.semibold },
+                  isFuture && styles.dayTxtMuted,
+                ]}
+              >
                 {d.getDate()}
               </Text>
-              {marcCor ? <View style={[styles.dot, { backgroundColor: marcCor }]} /> : null}
             </Pressable>
           );
         })}
@@ -98,13 +117,12 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   mes: { ...theme.font.semibold, fontSize: 15, color: theme.colors.text },
   ano: { color: theme.colors.textMuted, ...theme.font.regular },
-  weekRow: { flexDirection: "row", marginBottom: 6 },
+  weekRow: { flexDirection: "row", marginBottom: 4 },
   weekTxt: { flex: 1, textAlign: "center", fontSize: 11, color: theme.colors.textMuted, ...theme.font.medium },
   grid: { flexDirection: "row", flexWrap: "wrap" },
-  cell: { width: `${100 / 7}%`, aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 8 },
+  cell: { width: `${100 / 7}%`, aspectRatio: 1, justifyContent: "center", alignItems: "center", borderRadius: 6 },
   cellAtivo: { backgroundColor: theme.colors.primary },
-  dayTxt: { ...theme.font.medium, fontSize: 14, color: theme.colors.text },
+  dayTxt: { ...theme.font.medium, fontSize: 13, color: theme.colors.text },
   dayTxtAtivo: { color: "#fff", ...theme.font.bold },
   dayTxtMuted: { color: theme.colors.textSubtle },
-  dot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
 });

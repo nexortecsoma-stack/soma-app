@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,7 +33,7 @@ export default function RegistrarJornada() {
   const insets = useSafeAreaInsets();
   const { openDrawer, showToast, showModal, hideModal } = useUI();
   const { session } = useAuth();
-  const { create, list: jornadasList, listAuto } = useJornadas();
+  const { create, list: jornadasList } = useJornadas();
   const { create: criarGanho } = useGanhos();
   const { ativas: plataformasAtivas } = usePlataformas();
   const protect = useProtectedAction();
@@ -57,29 +57,6 @@ export default function RegistrarJornada() {
     if (params.minutos !== undefined && params.minutos !== "") setMinutos(params.minutos);
     if (params.km !== undefined && params.km !== "") setKm(params.km);
   }, [params.data, params.horas, params.minutos, params.km]);
-
-  // Preenche campos com os dados da última jornada automática encerrada
-  const preencherAutomatico = () => {
-    if (listAuto.isLoading) {
-      showToast({ type: "info", message: "Aguarde, carregando dados GPS..." });
-      return;
-    }
-    const jornadas = listAuto.data ?? [];
-    const jornadaAuto = [...jornadas]
-      .filter((j) => j.status === "encerrada")
-      .sort((a, b) => b.data_jornada.localeCompare(a.data_jornada))[0];
-
-    if (!jornadaAuto) {
-      showToast({ type: "error", message: "Nenhuma jornada GPS encerrada encontrada.\nUse o Histórico GPS para ver os registros." });
-      return;
-    }
-
-    setData(dateEngine.parseISO(jornadaAuto.data_jornada));
-    setHoras(String(jornadaAuto.horas ?? 0));
-    setMinutos(String(jornadaAuto.minutos ?? 0));
-    if (!km) setKm(String(jornadaAuto.km_percorrido_real || jornadaAuto.km_percorrido || ""));
-    showToast({ type: "success", message: "Preenchido com os dados da última jornada GPS" });
-  };
 
   // Marcadores do calendário
   const marcadores = useMemo(() => {
@@ -125,9 +102,12 @@ export default function RegistrarJornada() {
 
   const salvar = () => {
     setErro(null);
-    const h = parseInt(horas || "0", 10);
-    const m = parseInt(minutos || "0", 10);
-    const k = parseFloat((km || "0").replace(",", "."));
+    if (!horas.trim()) { setErro("Preencha as horas trabalhadas"); return; }
+    if (!minutos.trim()) { setErro("Preencha os minutos trabalhados"); return; }
+    if (!km.trim()) { setErro("Preencha o km percorrido"); return; }
+    const h = parseInt(horas, 10);
+    const m = parseInt(minutos, 10);
+    const k = parseFloat(km.replace(",", "."));
     const v = jornadaEngine.validar({ horas: h, minutos: m, km: k });
     if (!v.ok) {
       setErro(v.erro ?? "Dados inválidos");
@@ -209,18 +189,7 @@ export default function RegistrarJornada() {
 
         {/* Tempo & Distância */}
         <AppCard style={{ marginTop: 14 }}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitle}>Tempo & Distância</Text>
-            <Pressable style={styles.autoBtn} onPress={preencherAutomatico} hitSlop={6} disabled={listAuto.isLoading}>
-              {listAuto.isLoading
-                ? <ActivityIndicator size={12} color={theme.colors.primary} />
-                : <Ionicons name="navigate-outline" size={14} color={theme.colors.primary} />
-              }
-              <Text style={styles.autoBtnTxt}>
-                {listAuto.isLoading ? "Carregando..." : "Preencher da jornada GPS"}
-              </Text>
-            </Pressable>
-          </View>
+          <Text style={[styles.cardTitle, { marginBottom: 14 }]}>Tempo & Distância</Text>
           <View style={styles.row3}>
             <View style={{ flex: 1 }}>
               <AppInput
@@ -345,23 +314,7 @@ export default function RegistrarJornada() {
 }
 
 const styles = StyleSheet.create({
-  cardTitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
   cardTitle: { ...theme.font.semibold, fontSize: 15, color: theme.colors.text },
-  autoBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: theme.colors.primary + "15",
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  autoBtnTxt: { ...theme.font.semibold, fontSize: 12, color: theme.colors.primary },
   row3: { flexDirection: "row", alignItems: "flex-start" },
   calLegendRow: { flexDirection: "row", gap: 16, marginBottom: 8 },
   calLeg: { flexDirection: "row", alignItems: "center", gap: 5 },
