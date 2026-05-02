@@ -132,11 +132,12 @@ function RankingCard({
     Number(item[campo] || 0);
 
   const tags = [
-    item.categoria    ? CATEGORIAS_VEICULO.find((c) => c.id === item.categoria)?.nome ?? item.categoria : null,
-    item.tipo_tracao  ? TIPOS_TRACAO.find((t) => t.id === item.tipo_tracao)?.nome   ?? item.tipo_tracao  : null,
+    item.categoria   ? CATEGORIAS_VEICULO.find((c) => c.id === item.categoria)?.nome ?? item.categoria : null,
+    item.tipo_tracao ? TIPOS_TRACAO.find((t) => t.id === item.tipo_tracao)?.nome     ?? item.tipo_tracao : null,
   ].filter(Boolean) as string[];
 
-  const locTxt = [item.cidade, item.uf].filter(Boolean).join("/") || "—";
+  // Localização curta: só UF, sem cidade para não transbordar
+  const locTxt = item.uf ? item.uf : (item.cidade ? item.cidade.slice(0, 12) : "—");
 
   // Período que este participante sincronizou
   const periodoTxt = item.periodo_inicio
@@ -179,7 +180,7 @@ function RankingCard({
             {item.nome_publico ?? "Motorista anônimo"}
           </Text>
           <Text style={styles.locTxt} numberOfLines={1}>
-            {locTxt}{tags.length > 0 ? "  ·  " + tags.join(" · ") : ""}
+            {locTxt}{tags.length > 0 ? " · " + tags[0] : ""}
           </Text>
         </View>
 
@@ -258,9 +259,11 @@ export default function RankingScreen() {
     let base = list.data ?? [];
 
     // Filtrar por período: só mostra quem sincronizou neste período
+    // Usa data local (não UTC) para evitar problema de fuso horário
     if (filtro !== "todos") {
       const { inicio } = periodoParaDatas(filtro, refDate);
-      const inicioISO = inicio.toISOString().split("T")[0]!;
+      const d = inicio;
+      const inicioISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       base = base.filter((r) => r.periodo_inicio === inicioISO);
     }
 
@@ -549,12 +552,12 @@ const styles = StyleSheet.create({
   posTxt:  { ...theme.font.bold, fontSize: 12, color: theme.colors.text },
   foto:    { width: 38, height: 38, borderRadius: 19, flexShrink: 0 },
   fotoVazia: { backgroundColor: theme.colors.primary, justifyContent: "center", alignItems: "center" },
-  cardInfo: { flex: 1, marginLeft: 9, minWidth: 0 },
+  cardInfo: { flex: 1, marginLeft: 9, minWidth: 0, overflow: "hidden" },
   nome:    { ...theme.font.semibold, fontSize: 13, color: theme.colors.text },
   locTxt:  { ...theme.font.regular, fontSize: 10, color: theme.colors.textMuted, marginTop: 1 },
-  valorCol: { alignItems: "flex-end", marginLeft: 8, flexShrink: 0 },
-  valorPrincipal: { ...theme.font.bold, fontSize: 14, color: theme.colors.text },
-  valorLab: { ...theme.font.regular, fontSize: 9, color: theme.colors.textMuted, marginTop: 1 },
+  valorCol: { alignItems: "flex-end", marginLeft: 6, flexShrink: 0, maxWidth: 90 },
+  valorPrincipal: { ...theme.font.bold, fontSize: 13, color: theme.colors.text, textAlign: "right" },
+  valorLab: { ...theme.font.regular, fontSize: 9, color: theme.colors.textMuted, marginTop: 1, textAlign: "right" },
 
   // ── Painel expandido ──
   expandPanel: {

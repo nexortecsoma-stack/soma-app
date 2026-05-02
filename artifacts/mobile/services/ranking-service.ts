@@ -13,28 +13,10 @@ export const rankingService = {
 
   async upsert(payload: Omit<RankingSoma, "atualizado_em">): Promise<void> {
     const now = new Date().toISOString();
-
-    // Verifica se já existe um registro para este profile_id
-    const { data: existing, error: selectErr } = await supabase
+    const { error } = await supabase
       .from("ranking_soma")
-      .select("profile_id")
-      .eq("profile_id", payload.profile_id)
-      .maybeSingle();
-
-    if (selectErr) throw selectErr;
-
-    if (existing) {
-      const { error } = await supabase
-        .from("ranking_soma")
-        .update({ ...payload, atualizado_em: now })
-        .eq("profile_id", payload.profile_id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from("ranking_soma")
-        .insert({ ...payload, atualizado_em: now });
-      if (error) throw error;
-    }
+      .upsert({ ...payload, atualizado_em: now }, { onConflict: "profile_id" });
+    if (error) throw error;
   },
 
   async remove(profileId: string) {
