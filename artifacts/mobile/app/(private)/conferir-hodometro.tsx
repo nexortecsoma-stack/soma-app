@@ -30,12 +30,62 @@ import { AppProgressBar } from "@/components/ui/AppProgressBar";
 import { AppFooter } from "@/components/ui/AppFooter";
 
 const FILTROS: { id: FiltroPeriodo; label: string }[] = [
-  { id: "hoje", label: "Hoje" },
+  { id: "dia", label: "Dia" },
   { id: "semana", label: "Semana" },
   { id: "mes", label: "Mês" },
   { id: "ano", label: "Ano" },
   { id: "todos", label: "Tudo" },
 ];
+
+// ─── Helpers de navegação ────────────────────────────────────────────────────
+
+function refInicial(filtro: FiltroPeriodo): Date {
+  const hoje = dateEngine.hoje();
+  if (filtro === "mes") return new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  if (filtro === "ano") return new Date(hoje.getFullYear(), 0, 1);
+  return hoje;
+}
+
+function navAnterior(filtro: FiltroPeriodo, ref: Date): Date {
+  if (filtro === "dia")    return dateEngine.somarDias(ref, -1);
+  if (filtro === "semana") return dateEngine.somarDias(dateEngine.inicioSemana(ref), -7);
+  if (filtro === "mes")    return new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+  if (filtro === "ano")    return new Date(ref.getFullYear() - 1, 0, 1);
+  return ref;
+}
+
+function navProximo(filtro: FiltroPeriodo, ref: Date): Date {
+  if (filtro === "dia")    return dateEngine.somarDias(ref, 1);
+  if (filtro === "semana") return dateEngine.somarDias(dateEngine.inicioSemana(ref), 7);
+  if (filtro === "mes")    return new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+  if (filtro === "ano")    return new Date(ref.getFullYear() + 1, 0, 1);
+  return ref;
+}
+
+function proximoBloqueado(filtro: FiltroPeriodo, ref: Date): boolean {
+  if (filtro === "todos") return true;
+  const hoje = dateEngine.hoje();
+  if (filtro === "dia")    return ref >= hoje;
+  if (filtro === "semana") return dateEngine.inicioSemana(ref) >= dateEngine.inicioSemana(hoje);
+  if (filtro === "mes")    return ref.getFullYear() >= hoje.getFullYear() && ref.getMonth() >= hoje.getMonth();
+  if (filtro === "ano")    return ref.getFullYear() >= hoje.getFullYear();
+  return false;
+}
+
+function labelPeriodo(filtro: FiltroPeriodo, ref: Date): string {
+  if (filtro === "todos")  return "Todos os registros";
+  if (filtro === "dia")    return dateEngine.formatarBR(ref);
+  if (filtro === "semana") {
+    const ini = dateEngine.inicioSemana(ref);
+    const fim = dateEngine.fimSemana(ref);
+    return `${dateEngine.formatarBR(ini)} – ${dateEngine.formatarBR(fim)}`;
+  }
+  if (filtro === "mes") return dateEngine.formatarMesAno(ref);
+  if (filtro === "ano") return String(ref.getFullYear());
+  return "";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ConferirHodometro() {
   const insets = useSafeAreaInsets();
@@ -46,6 +96,7 @@ export default function ConferirHodometro() {
     useConferenciaHodometro();
 
   const [filtro, setFiltro] = useState<FiltroPeriodo>("mes");
+  const [refDate, setRefDate] = useState<Date>(() => refInicial("mes"));
   const [dataConf, setDataConf] = useState(dateEngine.hoje());
   const [hodometroInput, setHodometroInput] = useState("");
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -63,8 +114,9 @@ export default function ConferirHodometro() {
         veiculo,
         hodometroAtual: kmAtual,
         filtro,
+        refDate,
       }),
-    [jornadas, abastecimentos, veiculo, kmAtual, filtro],
+    [jornadas, abastecimentos, veiculo, kmAtual, filtro, refDate],
   );
 
   const abrirEdicao = (item: ConferenciaHodometro) => {
@@ -200,7 +252,10 @@ export default function ConferirHodometro() {
               {FILTROS.map((f) => (
                 <Pressable
                   key={f.id}
-                  onPress={() => setFiltro(f.id)}
+                  onPress={() => {
+                    setFiltro(f.id);
+                    setRefDate(refInicial(f.id));
+                  }}
                   style={[styles.pill, filtro === f.id && styles.pillAtivo]}
                 >
                   <Text style={[styles.pillTxt, filtro === f.id && styles.pillTxtAtivo]}>
@@ -210,13 +265,34 @@ export default function ConferirHodometro() {
               ))}
             </ScrollView>
 
+            {/* ── Navegação de período ── */}
+            {filtro !== "todos" && (
+              <View style={styles.navRow}>
+                <Pressable
+                  onPress={() => setRefDate(navAnterior(filtro, refDate))}
+                  hitSlop={10}
+                  style={styles.navBtn}
+                >
+                  <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
+                </Pressable>
+                <Text style={styles.navLabel}>{labelPeriodo(filtro, refDate)}</Text>
+                <Pressable
+                  onPress={() => { if (!proximoBloqueado(filtro, refDate)) setRefDate(navProximo(filtro, refDate)); }}
+                  hitSlop={10}
+                  disabled={proximoBloqueado(filtro, refDate)}
+                  style={[styles.navBtn, proximoBloqueado(filtro, refDate) && { opacity: 0.3 }]}
+                >
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.text} />
+                </Pressable>
+              </View>
+            )}
+
             {/* ── Card do período selecionado ── */}
-            <AppCard style={{ marginTop: 10 }}>
+            <AppCard style={{ marginTop: 6 }}>
               <View style={styles.periodoHeader}>
                 <Ionicons name="stats-chart" size={16} color={theme.colors.primary} />
                 <Text style={styles.periodoTit}>
-                  {FILTROS.find((f) => f.id === filtro)?.label ?? ""} ·{" "}
-                  {resumo.periodo.jornadasCount} jornada(s)
+                  {resumo.periodo.jornadasCount} jornada{resumo.periodo.jornadasCount !== 1 ? "s" : ""}
                 </Text>
                 {resumo.periodo.estimado && (
                   <View style={styles.badgeEst}>
@@ -471,6 +547,22 @@ const styles = StyleSheet.create({
   pillAtivo: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   pillTxt: { fontSize: 13, color: theme.colors.textMuted, ...theme.font.semibold },
   pillTxtAtivo: { color: "#fff" },
+  navRow: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10, marginBottom: 2,
+    paddingHorizontal: 2,
+  },
+  navBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1, borderColor: theme.colors.border,
+    justifyContent: "center", alignItems: "center",
+  },
+  navLabel: {
+    flex: 1, textAlign: "center",
+    ...theme.font.semibold, fontSize: 13, color: theme.colors.text,
+  },
   periodoHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
   periodoTit: { ...theme.font.semibold, fontSize: 14, color: theme.colors.text, flex: 1 },
   badgeEst: {

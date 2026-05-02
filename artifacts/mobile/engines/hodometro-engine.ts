@@ -2,7 +2,7 @@ import type { Abastecimento, Jornada, Veiculo } from "@/lib/types";
 import { combustivelEngine } from "./combustivel-engine";
 import { dateEngine } from "./date-engine";
 
-export type FiltroPeriodo = "hoje" | "semana" | "mes" | "ano" | "todos";
+export type FiltroPeriodo = "dia" | "semana" | "mes" | "ano" | "todos";
 
 export interface EstatisticasPeriodo {
   filtro: FiltroPeriodo;
@@ -52,21 +52,38 @@ export interface ConferenciaInput {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function inicioPeriodo(filtro: FiltroPeriodo): Date | null {
-  const hoje = new Date();
+function inicioPeriodo(filtro: FiltroPeriodo, ref: Date): Date | null {
+  const base = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
   switch (filtro) {
-    case "hoje":
-      return new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    case "dia":
+      return base;
     case "semana": {
-      const d = new Date(hoje);
-      d.setDate(hoje.getDate() - ((hoje.getDay() + 6) % 7)); // segunda-feira
-      d.setHours(0, 0, 0, 0);
+      const d = new Date(base);
+      d.setDate(base.getDate() - ((base.getDay() + 6) % 7)); // segunda-feira
       return d;
     }
     case "mes":
-      return new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      return new Date(base.getFullYear(), base.getMonth(), 1);
     case "ano":
-      return new Date(hoje.getFullYear(), 0, 1);
+      return new Date(base.getFullYear(), 0, 1);
+    case "todos":
+      return null;
+  }
+}
+
+function fimPeriodo(filtro: FiltroPeriodo, ref: Date): Date | null {
+  const base = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+  switch (filtro) {
+    case "dia":
+      return new Date(base.getFullYear(), base.getMonth(), base.getDate() + 1);
+    case "semana": {
+      const dayOfWeek = (base.getDay() + 6) % 7; // 0=seg … 6=dom
+      return new Date(base.getFullYear(), base.getMonth(), base.getDate() + (7 - dayOfWeek));
+    }
+    case "mes":
+      return new Date(base.getFullYear(), base.getMonth() + 1, 1);
+    case "ano":
+      return new Date(base.getFullYear() + 1, 0, 1);
     case "todos":
       return null;
   }
@@ -81,6 +98,7 @@ export const hodometroEngine = {
     veiculo: Veiculo | null;
     hodometroAtual: number;
     filtro: FiltroPeriodo;
+    refDate?: Date;
   }): ResumoHodometro {
     const hodometroInicial = Number(input.veiculo?.hodometro_inicial ?? 0);
     const hodometroAtual = input.hodometroAtual;
@@ -98,11 +116,13 @@ export const hodometroEngine = {
       : 0;
 
     // ── Filtro de período ──
-    const inicio = inicioPeriodo(input.filtro);
+    const ref = input.refDate ?? new Date();
+    const inicio = inicioPeriodo(input.filtro, ref);
+    const fim    = fimPeriodo(input.filtro, ref);
     const jornadasFiltradas = inicio
       ? input.jornadas.filter((j) => {
           const d = dateEngine.parseISO(j.data_jornada);
-          return d >= inicio;
+          return d >= inicio && (fim === null || d < fim);
         })
       : input.jornadas;
 
