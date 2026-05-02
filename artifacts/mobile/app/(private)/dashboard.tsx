@@ -203,6 +203,7 @@ export default function DashboardScreen() {
                   centroLabel="Líquido"
                   centroValor={data.ganhoMesLiquido}
                   centroPercent={data.ganhoMes > 0 ? (data.ganhoMesLiquido / data.ganhoMes) * 100 : 0}
+                  totalRef={data.ganhoMes}
                 />
               )}
               <View style={styles.legRow}>

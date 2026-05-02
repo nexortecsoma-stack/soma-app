@@ -17,6 +17,7 @@ interface Props {
   centroLabel?: string;
   centroValor?: number;
   centroPercent?: number;
+  totalRef?: number;
 }
 
 export function AppDonutChart({
@@ -26,6 +27,7 @@ export function AppDonutChart({
   centroLabel = "Total",
   centroValor,
   centroPercent,
+  totalRef,
 }: Props) {
   const total = data.reduce((s, d) => s + d.valor, 0);
   const radius = (size - strokeWidth) / 2;
@@ -87,7 +89,8 @@ export function AppDonutChart({
           <Text style={styles.vazio}>Nenhum dado</Text>
         ) : (
           data.slice(0, 6).map((d, i) => {
-            const pct = total > 0 ? Math.round((d.valor / total) * 100) : 0;
+            const base = totalRef != null && totalRef > 0 ? totalRef : total;
+            const pct = base > 0 ? Math.round((d.valor / base) * 100) : 0;
             return (
               <View key={i} style={styles.legendaItem}>
                 <View style={[styles.bullet, { backgroundColor: d.cor }]} />
