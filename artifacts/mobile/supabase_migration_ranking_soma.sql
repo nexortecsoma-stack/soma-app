@@ -1,6 +1,4 @@
--- Migração: criação da tabela ranking_soma
--- Execute no Supabase Dashboard → SQL Editor
-
+-- BLOCO 1: Cole e execute primeiro
 CREATE TABLE IF NOT EXISTS ranking_soma (
   profile_id        TEXT PRIMARY KEY,
   nome_publico      TEXT,
@@ -22,15 +20,13 @@ CREATE TABLE IF NOT EXISTS ranking_soma (
   atualizado_em     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Habilita Row Level Security
+-- BLOCO 2: Cole e execute em seguida (nova query)
 ALTER TABLE ranking_soma ENABLE ROW LEVEL SECURITY;
 
--- Qualquer pessoa pode ler o ranking
 CREATE POLICY "ranking_soma_select_public"
   ON ranking_soma FOR SELECT
   USING (true);
 
--- Só o próprio motorista pode inserir/atualizar/deletar seu registro
 CREATE POLICY "ranking_soma_insert_own"
   ON ranking_soma FOR INSERT
   WITH CHECK (profile_id = auth.uid()::text);
