@@ -254,13 +254,24 @@ export const despesaFixaEngine = {
       // ── Seguro ────────────────────────────────────────────────────────────
       // Contrato: data_inicio_seguro → data_fim_seguro (ou vencimento)
       // SOMA: interseção entre registros e o contrato
+      // Anual: distribui pelo ano de trabalho (dias úteis). Mensal: valor fixo ÷ dias úteis/mês
       if (considerarSeguro && v.tem_seguro && v.valor_seguro) {
-        const valorAnual = v.tipo_seguro === "anual" ? Number(v.valor_seguro) : Number(v.valor_seguro) * 12;
-        const valorDiario = valorAnual / diasUteisAno;
-        const valorMensal = valorDiario * diasUteisMes;
         const contratoInicioISO = v.data_inicio_seguro ?? null;
         const contratoFimISO = seguroTermoFinalISO(v);
         const soma = somaEfetiva(inicioISO, hojeISO, contratoInicioISO, contratoFimISO, diasFolga);
+        let valorMensal: number;
+        let valorDiario: number;
+        let formula: string;
+        if (v.tipo_seguro === "anual") {
+          const valorAnual = Number(v.valor_seguro);
+          valorDiario = valorAnual / diasUteisAno;
+          valorMensal = valorDiario * diasUteisMes;
+          formula = `Prêmio anual ${fmtMoeda(valorAnual)} ÷ ${diasUteisAno} dias úteis/ano = ${fmtMoeda(valorDiario)}/dia útil × ${diasUteisMes} dias/mês = ${fmtMoeda(valorMensal)}/mês\nSOMA: ${soma.dias} dias úteis × ${fmtMoeda(valorDiario)} = ${fmtMoeda(valorDiario * soma.dias)}`;
+        } else {
+          valorMensal = Number(v.valor_seguro);
+          valorDiario = valorMensal / diasUteisMes;
+          formula = `Parcela mensal ${fmtMoeda(valorMensal)} ÷ ${diasUteisMes} dias úteis/mês = ${fmtMoeda(valorDiario)}/dia\nSOMA: ${soma.dias} dias úteis × ${fmtMoeda(valorDiario)} = ${fmtMoeda(valorDiario * soma.dias)}`;
+        }
         const custoSoma = valorDiario * soma.dias;
         itens.push({
           tipo: "seguro",
@@ -270,29 +281,26 @@ export const despesaFixaEngine = {
           custoSoma,
           ativo: true,
           detalhamento: {
-            valorAnual,
+            valorAnual: v.tipo_seguro === "anual" ? Number(v.valor_seguro) : valorMensal * 12,
             diasUteisDesdeInicio: soma.dias,
             termoInicial: contratoInicioISO ? fmtData(contratoInicioISO) : termoInicialFmt,
             termoFinal: seguroTermoFinal(v),
             somaInicio: fmtData(soma.inicio),
             somaFim: fmtData(soma.fim),
             diasUteisItemSoma: soma.dias,
-            formula:
-              v.tipo_seguro === "anual"
-                ? `Prêmio anual ${fmtMoeda(Number(v.valor_seguro))} ÷ ${diasUteisAno} dias úteis/ano = ${fmtMoeda(valorDiario)}/dia útil × ${diasUteisMes} dias/mês = ${fmtMoeda(valorMensal)}/mês\nSOMA: ${soma.dias} dias úteis × ${fmtMoeda(valorDiario)} = ${fmtMoeda(custoSoma)}`
-                : `Parcela mensal ${fmtMoeda(Number(v.valor_seguro))} × 12 = ${fmtMoeda(valorAnual)}/ano ÷ ${diasUteisAno} dias úteis = ${fmtMoeda(valorDiario)}/dia\nSOMA: ${soma.dias} dias úteis × ${fmtMoeda(valorDiario)} = ${fmtMoeda(custoSoma)}`,
+            formula,
           },
         });
       }
 
       // ── Aluguel ───────────────────────────────────────────────────────────
       // Sem datas de início/fim específicas → SOMA = período completo de registros
+      // Valor mensal é fixo (contrato); diário = mensal ÷ dias úteis do mês
       if (v.tipo_propriedade === "alugado" && v.valor_aluguel) {
         const valorBase = Number(v.valor_aluguel);
         const valorMensalRef = v.tipo_aluguel === "semanal" ? valorBase * 4 : v.tipo_aluguel === "quinzenal" ? valorBase * 2 : valorBase;
-        const valorAnual = valorMensalRef * 12;
-        const valorDiario = valorAnual / diasUteisAno;
-        const valorMensal = valorDiario * diasUteisMes;
+        const valorMensal = valorMensalRef;
+        const valorDiario = valorMensal / diasUteisMes;
         const custoSoma = valorDiario * diasUteisDesdeInicio;
         itens.push({
           tipo: "aluguel",
@@ -302,7 +310,7 @@ export const despesaFixaEngine = {
           custoSoma,
           ativo: true,
           detalhamento: {
-            valorAnual,
+            valorAnual: valorMensalRef * 12,
             diasUteisDesdeInicio,
             termoInicial: termoInicialFmt,
             termoFinal: "Contrato vigente",
@@ -311,20 +319,19 @@ export const despesaFixaEngine = {
             diasUteisItemSoma: diasUteisDesdeInicio,
             formula:
               v.tipo_aluguel === "semanal"
-                ? `${fmtMoeda(valorBase)}/sem × 4 = ${fmtMoeda(valorMensalRef)}/mês × 12 ÷ ${diasUteisAno} dias úteis = ${fmtMoeda(valorDiario)}/dia`
+                ? `${fmtMoeda(valorBase)}/sem × 4 = ${fmtMoeda(valorMensalRef)}/mês ÷ ${diasUteisMes} dias úteis/mês = ${fmtMoeda(valorDiario)}/dia`
                 : v.tipo_aluguel === "quinzenal"
-                ? `${fmtMoeda(valorBase)}/quinzena × 2 = ${fmtMoeda(valorMensalRef)}/mês × 12 ÷ ${diasUteisAno} dias úteis = ${fmtMoeda(valorDiario)}/dia`
-                : `${fmtMoeda(valorMensalRef)}/mês × 12 ÷ ${diasUteisAno} dias úteis = ${fmtMoeda(valorDiario)}/dia`,
+                ? `${fmtMoeda(valorBase)}/quinzena × 2 = ${fmtMoeda(valorMensalRef)}/mês ÷ ${diasUteisMes} dias úteis/mês = ${fmtMoeda(valorDiario)}/dia`
+                : `${fmtMoeda(valorMensalRef)}/mês ÷ ${diasUteisMes} dias úteis/mês = ${fmtMoeda(valorDiario)}/dia`,
           },
         });
       }
 
       // ── Financiamento ─────────────────────────────────────────────────────
+      // Parcela é valor fixo mensal; diário = parcela ÷ dias úteis do mês
       if (v.tipo_propriedade === "financiado" && v.valor_parcela) {
-        const valorMensalRef = Number(v.valor_parcela);
-        const valorAnual = valorMensalRef * 12;
-        const valorDiario = valorAnual / diasUteisAno;
-        const valorMensal = valorDiario * diasUteisMes;
+        const valorMensal = Number(v.valor_parcela);
+        const valorDiario = valorMensal / diasUteisMes;
         const custoSoma = valorDiario * diasUteisDesdeInicio;
         itens.push({
           tipo: "financiamento",
@@ -334,14 +341,14 @@ export const despesaFixaEngine = {
           custoSoma,
           ativo: true,
           detalhamento: {
-            valorAnual,
+            valorAnual: valorMensal * 12,
             diasUteisDesdeInicio,
             termoInicial: termoInicialFmt,
             termoFinal: "Término do contrato",
             somaInicio: termoInicialFmt,
             somaFim: fmtData(hojeISO),
             diasUteisItemSoma: diasUteisDesdeInicio,
-            formula: `Parcela ${fmtMoeda(valorMensalRef)}/mês × 12 ÷ ${diasUteisAno} dias úteis/ano = ${fmtMoeda(valorDiario)}/dia útil`,
+            formula: `Parcela ${fmtMoeda(valorMensal)}/mês ÷ ${diasUteisMes} dias úteis/mês = ${fmtMoeda(valorDiario)}/dia útil`,
           },
         });
       }
@@ -379,11 +386,10 @@ export const despesaFixaEngine = {
       }
 
       // ── Internet ──────────────────────────────────────────────────────────
+      // Plano mensal fixo; diário = mensal ÷ dias úteis do mês
       if (considerarInternet) {
-        const mensalInternet = Number(input.perfil?.valor_internet_mensal ?? 80);
-        const valorAnual = mensalInternet * 12;
-        const valorDiario = valorAnual / diasUteisAno;
-        const valorMensal = valorDiario * diasUteisMes;
+        const valorMensal = Number(input.perfil?.valor_internet_mensal ?? 80);
+        const valorDiario = valorMensal / diasUteisMes;
         const custoSoma = valorDiario * diasUteisDesdeInicio;
         itens.push({
           tipo: "internet",
@@ -393,14 +399,14 @@ export const despesaFixaEngine = {
           custoSoma,
           ativo: true,
           detalhamento: {
-            valorAnual,
+            valorAnual: valorMensal * 12,
             diasUteisDesdeInicio,
             termoInicial: termoInicialFmt,
             termoFinal: "Plano vigente",
             somaInicio: termoInicialFmt,
             somaFim: fmtData(hojeISO),
             diasUteisItemSoma: diasUteisDesdeInicio,
-            formula: `${fmtMoeda(mensalInternet)}/mês × 12 ÷ ${diasUteisAno} dias úteis/ano = ${fmtMoeda(valorDiario)}/dia`,
+            formula: `${fmtMoeda(valorMensal)}/mês ÷ ${diasUteisMes} dias úteis/mês = ${fmtMoeda(valorDiario)}/dia`,
           },
         });
       }
@@ -461,14 +467,15 @@ export const despesaFixaEngine = {
       }
 
       // ── Assinatura SOMA ───────────────────────────────────────────────────
+      // Plano mensal/semestral/anual → valor mensal equivalente fixo; diário = mensal ÷ dias úteis
       if (considerarSoma && input.perfil?.assinante) {
-        const planoMap: Record<string, number> = {
-          mensal: (29.0 * 12) / diasUteisAno,
-          semestral: (99.9 * 2) / diasUteisAno,
-          anual: 129.0 / diasUteisAno,
+        const mensalMap: Record<string, number> = {
+          mensal:    29.0,
+          semestral: 99.9 / 6,
+          anual:     129.0 / 12,
         };
-        const valorDiario = planoMap[input.perfil.plano] ?? 0;
-        const valorMensal = valorDiario * diasUteisMes;
+        const valorMensal = mensalMap[input.perfil.plano] ?? 0;
+        const valorDiario = valorMensal / diasUteisMes;
         const custoSoma = valorDiario * diasUteisDesdeInicio;
         itens.push({
           tipo: "custo_soma",
@@ -478,14 +485,14 @@ export const despesaFixaEngine = {
           custoSoma,
           ativo: true,
           detalhamento: {
-            valorAnual: valorDiario * diasUteisAno,
+            valorAnual: valorMensal * 12,
             diasUteisDesdeInicio,
             termoInicial: termoInicialFmt,
             termoFinal: "Vigência do plano",
             somaInicio: termoInicialFmt,
             somaFim: fmtData(hojeISO),
             diasUteisItemSoma: diasUteisDesdeInicio,
-            formula: `Plano ${input.perfil.plano} ÷ ${diasUteisAno} dias úteis/ano = ${fmtMoeda(valorDiario)}/dia útil`,
+            formula: `Plano ${input.perfil.plano} ${fmtMoeda(valorMensal)}/mês ÷ ${diasUteisMes} dias úteis/mês = ${fmtMoeda(valorDiario)}/dia útil`,
           },
         });
       }
