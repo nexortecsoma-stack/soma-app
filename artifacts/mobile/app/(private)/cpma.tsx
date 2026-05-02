@@ -392,10 +392,10 @@ export default function CPMAScreen() {
                 color={theme.colors.accent}
               />
               <MiniCard
-                icon="trending-up"
-                label="Ganho / hora"
-                value={data.ganhoPorHora > 0 ? fmt(data.ganhoPorHora) : "—"}
-                color={theme.colors.success}
+                icon="speedometer-outline"
+                label="KM / corrida"
+                value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"}
+                color={theme.colors.indigo}
               />
             </View>
             <View style={styles.grid}>
@@ -403,15 +403,20 @@ export default function CPMAScreen() {
                 icon="cash-outline"
                 label="Ganho / corrida"
                 value={data.ganhoPorCorrida > 0 ? fmt(data.ganhoPorCorrida) : "—"}
-                color={theme.colors.accent}
+                color={theme.colors.success}
               />
               <MiniCard
-                icon="speedometer-outline"
-                label="KM / corrida"
-                value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"}
-                color={theme.colors.indigo}
+                icon="trending-up"
+                label="Ganho / hora"
+                value={data.ganhoPorHora > 0 ? fmt(data.ganhoPorHora) : "—"}
+                color={theme.colors.primary}
               />
-              <View style={mini.cardEmpty} />
+              <MiniCard
+                icon="leaf"
+                label="Ganho real / hora"
+                value={data.ganhoRealPorHora !== 0 ? fmt(data.ganhoRealPorHora) : "—"}
+                color={data.ganhoRealPorHora >= 0 ? theme.colors.success : theme.colors.danger}
+              />
             </View>
 
             {/* ════════════════════════════════════════════════════════════════
