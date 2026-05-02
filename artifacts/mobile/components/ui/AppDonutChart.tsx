@@ -22,7 +22,7 @@ interface Props {
 
 export function AppDonutChart({
   data,
-  size = 150,
+  size = 170,
   strokeWidth = 22,
   centroLabel = "Total",
   centroValor,
@@ -78,7 +78,7 @@ export function AppDonutChart({
           <Text style={styles.centerLabel}>{centroLabel}</Text>
           <Text style={styles.centerValor}>{currencyEngine.formatar(valorCentral)}</Text>
           {centroPercent != null && (
-            <Text style={styles.centerPct}>{centroPercent.toFixed(0)}%</Text>
+            <Text style={styles.centerPct}>{centroPercent.toFixed(2)}%</Text>
           )}
         </View>
       </View>
@@ -88,7 +88,7 @@ export function AppDonutChart({
         {data.length === 0 ? (
           <Text style={styles.vazio}>Nenhum dado</Text>
         ) : (
-          data.slice(0, 6).map((d, i) => {
+          data.map((d, i) => {
             const base = totalRef != null && totalRef > 0 ? totalRef : total;
             const pct = base > 0 ? (d.valor / base * 100).toFixed(2) : "0.00";
             return (
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   legendaTextos: { flex: 1 },
   legendaNomeRow: { flexDirection: "row", alignItems: "center" },
   legendaNome: { fontSize: 11, color: theme.colors.text, ...theme.font.medium, flexShrink: 1 },
-  legendaPct: { fontSize: 11, ...theme.font.bold, flexShrink: 0 },
+  legendaPct: { fontSize: 11, ...theme.font.bold, flexShrink: 0, marginLeft: 5 },
   legendaValor: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.regular, marginTop: 1 },
   vazio: { color: theme.colors.textMuted, fontSize: 12, ...theme.font.regular },
 });
