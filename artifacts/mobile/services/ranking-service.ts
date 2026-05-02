@@ -15,7 +15,10 @@ export const rankingService = {
     const now = new Date().toISOString();
     const { error } = await supabase
       .from("ranking_soma")
-      .upsert({ ...payload, atualizado_em: now }, { onConflict: "profile_id" });
+      .upsert(
+        { ...payload, atualizado_em: now, updated_at: now },
+        { onConflict: "profile_id" },
+      );
     if (error) throw error;
   },
 

@@ -44,6 +44,15 @@ const PERIODOS: { id: RankingPeriodo; label: string }[] = [
 type ChipKey = "metrica" | "uf" | "categoria" | "tracao" | "propriedade";
 type RankingItem = ReturnType<typeof rankingEngine.filtrar>[number];
 
+// Formato compacto sem "R$" para células estreitas
+function fmtStat(v: number): string {
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  if (abs >= 10000) return `${sign}${(abs / 1000).toFixed(1)}k`;
+  if (abs >= 1000)  return `${sign}${(abs / 1000).toFixed(2)}k`;
+  return currencyEngine.formatar(v).replace("R$ ", "").replace("R$", "");
+}
+
 // ─── Helpers de navegação de período ────────────────────────────────────────
 
 function refInicial(filtro: RankingPeriodo): Date {
@@ -221,13 +230,12 @@ function RankingCard({
             {stats.map((s) => (
               <View key={s.id} style={[styles.statCell, s.id === campo && styles.statCellAtivo]}>
                 <Text style={styles.statLab}>{s.lab}</Text>
+                <Text style={styles.statPrefix}>R$</Text>
                 <Text
                   style={[styles.statVal, s.id === campo && styles.statValAtivo]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.7}
                 >
-                  {currencyEngine.formatar(s.val)}
+                  {fmtStat(s.val)}
                 </Text>
                 {s.sub && <Text style={styles.statSub}>{s.sub}</Text>}
               </View>
@@ -590,9 +598,10 @@ const styles = StyleSheet.create({
   statCellAtivo: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + "0D" },
   statLab: {
     fontSize: 9, ...theme.font.medium,
-    color: theme.colors.textMuted, textTransform: "uppercase", marginBottom: 3,
+    color: theme.colors.textMuted, textTransform: "uppercase", marginBottom: 1,
   },
-  statVal: { fontSize: 12, ...theme.font.bold, color: theme.colors.text, textAlign: "center" },
+  statPrefix: { fontSize: 8, ...theme.font.medium, color: theme.colors.textMuted },
+  statVal: { fontSize: 13, ...theme.font.bold, color: theme.colors.text, textAlign: "center" },
   statValAtivo: { color: theme.colors.primaryDark },
   statSub: { fontSize: 8, ...theme.font.medium, color: theme.colors.textMuted, marginTop: 2, textTransform: "uppercase" },
 
