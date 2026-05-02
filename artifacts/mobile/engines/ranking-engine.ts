@@ -62,12 +62,18 @@ export const rankingEngine = {
 
     const ganhoBruto = ganhos.reduce((s, g) => s + Number(g.valor || 0), 0);
     const ganhoLiquido = ganhoBruto - despesasTotal - custoFixoTotal;
-    const totalMin = jornadas.reduce((s, j) => s + Number(j.tempo_efetivo_minutos || j.tempo_total_minutos || 0), 0);
+
+    // Horas totais (igual ao meus-ganhos: tempo_total_minutos, fallback manual)
+    const totalMin = jornadas.reduce((s, j) => {
+      const tot = Number(j.tempo_total_minutos);
+      const man = Number((j as any).horas ?? 0) * 60 + Number((j as any).minutos ?? 0);
+      return s + (tot > 0 ? tot : man > 0 ? man : Number(j.tempo_efetivo_minutos || 0));
+    }, 0);
     const horas = totalMin / 60;
-    const km = jornadas.reduce(
-      (s, j) => s + Number(j.km_percorrido_real || j.km_percorrido || 0),
-      0,
-    );
+
+    // Km declarado (igual ao meus-ganhos: ganhoPorKm usa km_percorrido, não o real)
+    const km = jornadas.reduce((s, j) => s + Number(j.km_percorrido || 0), 0);
+
     const ganhoPorHora = horas > 0 ? Math.max(0, ganhoBruto / horas) : 0;
     const ganhoPorKm   = km   > 0 ? Math.max(0, ganhoBruto / km)   : 0;
     return {
