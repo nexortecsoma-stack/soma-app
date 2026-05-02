@@ -3,6 +3,7 @@ import { useAuth } from "./AuthContext";
 import { cpmaService } from "@/services/cpma-service";
 import { combustivelEngine } from "@/engines/combustivel-engine";
 import { despesaFixaEngine } from "@/engines/despesa-fixa-engine";
+import { hodometroEngine } from "@/engines/hodometro-engine";
 import { dateEngine } from "@/engines/date-engine";
 import type { FiltroPeriodo } from "@/engines/hodometro-engine";
 
@@ -139,11 +140,22 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
       const pct = (n: number) =>
         ganhoBruto > 0 ? Math.max(-999, Math.round((n / ganhoBruto) * 100)) : 0;
 
-      // ── KM pessoal (só para "todos") ─────────────────────────────────
+      // ── KM pessoal via hodometroEngine (usa hodômetro real da última conferência) ──
       let kmPessoal: number | null = null;
-      if (filtro === "todos" && veiculo?.km_atual != null && veiculo?.hodometro_inicial != null) {
-        const kmTotalGeral = Number(veiculo.km_atual) - Number(veiculo.hodometro_inicial);
-        kmPessoal = Math.max(0, kmTotalGeral - kmTrabalho);
+      if (veiculo?.hodometro_inicial != null) {
+        const hodometroAtual =
+          raw.ultimaConferencia?.hodometro_atual ??
+          Number(veiculo.km_atual ?? veiculo.hodometro_inicial);
+
+        const resumo = hodometroEngine.resumo({
+          jornadas: raw.todasJornadas,
+          abastecimentos: raw.abastecimentos,
+          veiculo,
+          hodometroAtual,
+          filtro,
+          refDate,
+        });
+        kmPessoal = resumo.periodo.kmPessoal;
       }
 
       return {
