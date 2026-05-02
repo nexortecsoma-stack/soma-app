@@ -16,10 +16,12 @@ export interface CPMAData {
 
   // Custos
   totalCustos: number;
-  despesasVar: number;
   custoCombustivel: number;
   custoFixo: number;
   pctCustos: number;
+
+  // Despesas variáveis individuais (agrupadas por categoria)
+  despesasItems: Array<{ nome: string; valor: number }>;
 
   // Quilometragem
   kmTrabalho: number;
@@ -33,6 +35,7 @@ export interface CPMAData {
   corridasPorHora: number;
   ganhoPorHora: number;
   ganhoPorCorrida: number;
+  kmPorCorrida: number;
 
   // Ratios por km
   custoPorKm: number;
@@ -92,6 +95,16 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
       const ganhoBruto = raw.ganhos.reduce((s, g) => s + (Number(g.valor) || 0), 0);
       const corridas = raw.ganhos.reduce((s, g) => s + (Number(g.corridas) || 0), 0);
       const despesasVar = raw.despesas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
+
+      // ── Despesas individuais agrupadas por categoria ─────────────────────
+      const despesasMap = new Map<string, number>();
+      for (const d of raw.despesas) {
+        const nome = d.categoria_personalizada?.trim() || d.categoria;
+        despesasMap.set(nome, (despesasMap.get(nome) ?? 0) + (Number(d.valor) || 0));
+      }
+      const despesasItems = Array.from(despesasMap.entries())
+        .map(([nome, valor]) => ({ nome, valor }))
+        .sort((a, b) => b.valor - a.valor);
       const kmTrabalho = raw.jornadas.reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
       const minutos = raw.jornadas.reduce((s, j) => s + (Number(j.tempo_efetivo_minutos) || 0), 0);
       const horas = minutos / 60;
@@ -141,10 +154,10 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         pctReal: pct(ganhoReal),
 
         totalCustos,
-        despesasVar,
         custoCombustivel,
         custoFixo,
         pctCustos: pct(totalCustos),
+        despesasItems,
 
         kmTrabalho,
         kmPessoal,
@@ -156,6 +169,7 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         corridasPorHora: horas > 0 ? corridas / horas : 0,
         ganhoPorHora: horas > 0 ? ganhoBruto / horas : 0,
         ganhoPorCorrida: corridas > 0 ? ganhoBruto / corridas : 0,
+        kmPorCorrida: corridas > 0 ? kmTrabalho / corridas : 0,
 
         custoPorKm: kmTrabalho > 0 ? totalCustos / kmTrabalho : 0,
         custoPorCorrida: corridas > 0 ? totalCustos / corridas : 0,

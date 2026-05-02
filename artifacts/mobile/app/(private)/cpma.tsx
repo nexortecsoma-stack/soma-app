@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -8,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,6 +22,9 @@ import { useCPMA } from "@/hooks/useCPMA";
 import type { FiltroPeriodo } from "@/engines/hodometro-engine";
 import { AppHeader } from "@/components/ui/AppHeader";
 import { AppFooter } from "@/components/ui/AppFooter";
+
+// Largura fixa para todos os cards (sempre 1/3 da tela)
+const CARD_W = Math.floor((Dimensions.get("window").width - 24) / 3);
 
 // ─── Helpers de período (mesmo padrão de conferir-hodometro) ────────────────
 
@@ -101,17 +106,25 @@ function MiniCard({
         </View>
         <Text style={mini.label} numberOfLines={1}>{label}</Text>
       </View>
-      {/* valor + % na mesma linha */}
+      {/* valor + % — value à esquerda, % encostado na direita */}
       <View style={mini.valueRow}>
         <Text style={[mini.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
           {value}
         </Text>
         {pct !== undefined && (
-          <Text style={[mini.pct, { color }]}> {pct}%</Text>
+          <Text style={[mini.pct, { color }]}>{pct}%</Text>
         )}
       </View>
     </View>
   );
+}
+
+// ─── Utilitário ──────────────────────────────────────────────────────────────
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
+  return result;
 }
 
 // ─── Separador de seção ──────────────────────────────────────────────────────
@@ -273,28 +286,45 @@ export default function CPMAScreen() {
                 pct={data.pctCustos}
               />
               <MiniCard
-                icon="receipt"
-                label="Despesas Variáveis"
-                value={fmt(data.despesasVar)}
-                color={theme.colors.orange}
-              />
-              <MiniCard
                 icon="flame"
-                label="Custo Combustível"
+                label="Combustível"
                 value={fmt(data.custoCombustivel)}
                 color={theme.colors.warning}
               />
-            </View>
-            <View style={styles.grid}>
               <MiniCard
                 icon="wallet"
                 label="Custo Fixo"
                 value={fmt(data.custoFixo)}
                 color={theme.colors.purple}
               />
-              <View style={mini.cardEmpty} />
-              <View style={mini.cardEmpty} />
             </View>
+
+            {/* ── Despesas variáveis individuais (só se houver) ─────────── */}
+            {data.despesasItems.length > 0 && (
+              <>
+                <SectionLabel>Despesas Variáveis</SectionLabel>
+                {chunk(data.despesasItems, 3).map((row, ri) => (
+                  <View key={ri} style={styles.grid}>
+                    {row.map((item) => (
+                      <MiniCard
+                        key={item.nome}
+                        icon="receipt"
+                        label={item.nome}
+                        value={fmt(item.valor)}
+                        color={theme.colors.orange}
+                      />
+                    ))}
+                    {row.length === 2 && <View style={mini.cardEmpty} />}
+                    {row.length === 1 && (
+                      <>
+                        <View style={mini.cardEmpty} />
+                        <View style={mini.cardEmpty} />
+                      </>
+                    )}
+                  </View>
+                ))}
+              </>
+            )}
 
             {/* ════════════════════════════════════════════════════════════════
                 QUILOMETRAGEM
@@ -365,6 +395,16 @@ export default function CPMAScreen() {
                 color={theme.colors.success}
               />
             </View>
+            <View style={styles.grid}>
+              <MiniCard
+                icon="speedometer-outline"
+                label="KM / corrida"
+                value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"}
+                color={theme.colors.accent}
+              />
+              <View style={mini.cardEmpty} />
+              <View style={mini.cardEmpty} />
+            </View>
 
             {/* ════════════════════════════════════════════════════════════════
                 RATIOS POR KM E CORRIDA
@@ -393,7 +433,7 @@ export default function CPMAScreen() {
             <View style={styles.grid}>
               <MiniCard
                 icon="leaf-outline"
-                label="Ganho / km Real"
+                label="Ganho real / km"
                 value={data.ganhoPorKmReal !== 0 ? `R$ ${fmtN(data.ganhoPorKmReal, 2)}` : "—"}
                 color={data.ganhoPorKmReal >= 0 ? theme.colors.success : theme.colors.danger}
               />
@@ -551,7 +591,7 @@ const styles = StyleSheet.create({
 
 const mini = StyleSheet.create({
   card: {
-    flex: 1,
+    width: CARD_W,
     backgroundColor: "#fff",
     borderRadius: theme.radius.sm,
     paddingHorizontal: 7,
@@ -560,7 +600,7 @@ const mini = StyleSheet.create({
     ...theme.shadow.soft,
   },
   cardEmpty: {
-    flex: 1,
+    width: CARD_W,
     backgroundColor: "transparent",
   },
   headerRow: {
@@ -579,6 +619,7 @@ const mini = StyleSheet.create({
   valueRow: {
     flexDirection: "row",
     alignItems: "baseline",
+    justifyContent: "space-between",
   },
   value: {
     ...theme.font.bold,
