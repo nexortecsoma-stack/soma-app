@@ -5,11 +5,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { useUI } from "@/hooks/UIContext";
 import { useManutencoes } from "@/hooks/useManutencoes";
-import { useJornadas } from "@/hooks/useJornadas";
+import { useConferenciaHodometro } from "@/hooks/useConferenciaHodometro";
 import { useAuth } from "@/hooks/AuthContext";
 import { useProtectedAction } from "@/hooks/useProtectedAction";
 import { TIPOS_MANUTENCAO } from "@/lib/constants";
-import type { Manutencao } from "@/lib/types";
+import type { Manutencao, ConferenciaHodometro } from "@/lib/types";
 import { dateEngine } from "@/engines/date-engine";
 import { currencyEngine } from "@/engines/currency-engine";
 import { manutencaoEngine, type ManutencaoComStatus } from "@/engines/manutencao-engine";
@@ -30,13 +30,34 @@ function fmtKm(km: number | null | undefined): string {
   return Number(km).toLocaleString("pt-BR") + " km";
 }
 
+/**
+ * Km média mensal a partir das conferências de hodômetro (km total rodado).
+ * - 1 conferência: usa km_total_periodo diretamente
+ * - 2+ conferências: km/dia por intervalo × 30
+ */
+function kmMediaMensalDeConferencias(confs: ConferenciaHodometro[]): number | null {
+  if (confs.length === 0) return null;
+  const sorted = [...confs].sort((a, b) => a.data_conferencia.localeCompare(b.data_conferencia));
+  if (sorted.length === 1) return sorted[0]!.km_total_periodo;
+  let totalKm = 0;
+  let totalDias = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const dA = new Date(sorted[i - 1]!.data_conferencia + "T00:00:00");
+    const dB = new Date(sorted[i]!.data_conferencia + "T00:00:00");
+    const dias = Math.max(1, Math.round((dB.getTime() - dA.getTime()) / 86400000));
+    totalKm += sorted[i]!.km_total_periodo;
+    totalDias += dias;
+  }
+  return totalDias > 0 ? (totalKm / totalDias) * 30 : sorted[sorted.length - 1]!.km_total_periodo;
+}
+
 export default function Manutencoes() {
   const insets = useSafeAreaInsets();
   const { veiculo } = useAuth();
   const { openDrawer, showModal, hideModal, showToast } = useUI();
   const protect = useProtectedAction();
   const { list, create, update, remove } = useManutencoes();
-  const { list: jornadasList } = useJornadas();
+  const { list: conferenciasList } = useConferenciaHodometro();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Manutencao | null>(null);
@@ -48,15 +69,10 @@ export default function Manutencoes() {
   const [duracaoMes, setDuracaoMes] = useState("");
   const [obs, setObs] = useState("");
 
-  // Km média mensal dos últimos 90 dias
+  // Km média mensal baseada no hodômetro (km total rodado, não só trabalhado)
   const kmMediaMensal = useMemo(() => {
-    const todas = jornadasList.data ?? [];
-    const hoje = dateEngine.hoje();
-    const limite90 = dateEngine.formatarISO(dateEngine.somarDias(hoje, -90));
-    const recentes = todas.filter((j) => j.data_jornada >= limite90);
-    const totalKm = recentes.reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
-    return totalKm > 0 ? totalKm / 3 : 0;
-  }, [jornadasList.data]);
+    return kmMediaMensalDeConferencias(conferenciasList.data ?? []) ?? 0;
+  }, [conferenciasList.data]);
 
   const abrirNovo = () => {
     setEditing(null);
@@ -356,7 +372,11 @@ export default function Manutencoes() {
                         ? Math.round(kmMediaMensal).toLocaleString("pt-BR") + " km"
                         : "sem dados"}
                     </Text>
-                    <Text style={styles.summaryMeta}>base dos últimos 90 dias</Text>
+                    <Text style={styles.summaryMeta}>
+                      {conferenciasList.data && conferenciasList.data.length > 0
+                        ? `${conferenciasList.data.length} conferência(s) hodômetro`
+                        : "base: km das jornadas"}
+                    </Text>
                   </View>
                 </View>
               </View>
