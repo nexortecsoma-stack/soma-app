@@ -171,7 +171,7 @@ export default function CPMAScreen() {
   const fmtH = (h: number) => {
     const hh = Math.floor(h);
     const mm = Math.round((h - hh) * 60);
-    return mm > 0 ? `${hh}h ${String(mm).padStart(2, "0")}min` : `${hh}h`;
+    return mm > 0 ? `${hh}h${String(mm).padStart(2, "0")}min` : `${hh}h`;
   };
 
   // ── Dados do veículo / perfil ──────────────────────────────────────────────
@@ -388,7 +388,7 @@ export default function CPMAScreen() {
               <MiniCard
                 icon="hourglass"
                 label="Horas / dia"
-                value={data.horasPorDia > 0 ? `${fmtN(data.horasPorDia, 1)}h` : "—"}
+                value={data.horasPorDia > 0 ? fmtH(data.horasPorDia) : "—"}
                 color={theme.colors.accent}
               />
               <MiniCard
