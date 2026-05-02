@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -20,35 +21,64 @@ import { dateEngine } from "@/engines/date-engine";
 import { currencyEngine } from "@/engines/currency-engine";
 import { useAuth } from "@/hooks/AuthContext";
 import { useUI } from "@/hooks/UIContext";
-import { useDashboard } from "@/hooks/useDashboard";
-import { AppHeader } from "@/components/ui/AppHeader";
-import { AppProgressBar } from "@/components/ui/AppProgressBar";
+import { useCPMA } from "@/hooks/useCPMA";
 import { APP_FULL_NAME } from "@/lib/constants";
 
-// ─── Cartão de stat ──────────────────────────────────────────────────────────
+// Largura de cada mini card dentro do card capturável
+// ScrollView padding: 16*2=32, cardBg padding: 20*2=40, gaps: 4*2=8
+const SHARE_W = Math.floor((Dimensions.get("window").width - 80) / 3);
 
-function StatCard({
+// ─── Utilitário ───────────────────────────────────────────────────────────────
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// ─── Mini card (mesmo estilo do CPMA, tamanho do share) ──────────────────────
+
+function MiniCard({
   icon,
   label,
   value,
   color,
-  small,
+  pct,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   color: string;
-  small?: boolean;
+  pct?: number;
 }) {
   return (
-    <View style={[card.wrap, { borderLeftColor: color }]}>
-      <View style={[card.iconWrap, { backgroundColor: color + "22" }]}>
-        <Ionicons name={icon} size={small ? 13 : 15} color={color} />
+    <View style={[mc.card, { borderLeftColor: color, width: SHARE_W }]}>
+      <View style={mc.headerRow}>
+        <View style={[mc.iconWrap, { backgroundColor: color + "1F" }]}>
+          <Ionicons name={icon} size={11} color={color} />
+        </View>
+        <Text style={mc.label} numberOfLines={1}>{label}</Text>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={card.label} numberOfLines={1}>{label}</Text>
-        <Text style={[card.value, { color }]} numberOfLines={1}>{value}</Text>
+      <View style={mc.valueRow}>
+        <Text style={[mc.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
+        {pct !== undefined && (
+          <Text style={[mc.pct, { color }]}>{pct}%</Text>
+        )}
       </View>
+    </View>
+  );
+}
+
+// ─── Separador de seção (tema escuro) ────────────────────────────────────────
+
+function SecLabel({ children }: { children: string }) {
+  return (
+    <View style={sl.wrap}>
+      <View style={sl.line} />
+      <Text style={sl.txt}>{children}</Text>
+      <View style={sl.line} />
     </View>
   );
 }
@@ -58,12 +88,16 @@ function StatCard({
 export default function CompartilharScreen() {
   const insets = useSafeAreaInsets();
   const { perfil } = useAuth();
-  const { openDrawer, showToast } = useUI();
+  const { showToast } = useUI();
   const viewShotRef = useRef<ViewShot>(null);
   const [capturing, setCapturing] = useState(false);
 
-  const [mes] = useState(new Date());
-  const { data, loading, refetch } = useDashboard(mes, 0);
+  // Período: mês atual fixo
+  const hoje = dateEngine.hoje();
+  const refDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const mesLabel = dateEngine.formatarMesAno(refDate);
+
+  const { data, isLoading, isFetching, refetch } = useCPMA("mes", refDate);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -73,26 +107,31 @@ export default function CompartilharScreen() {
 
   const nomeExibir = perfil?.nome_publico || perfil?.nome || "Motorista";
   const cidade = perfil?.cidade ? `${perfil.cidade}${perfil.uf ? `/${perfil.uf}` : ""}` : null;
-  const mesLabel = dateEngine.formatarMesAno(mes);
 
-  // ── Captura e compartilha ──────────────────────────────────────────────────
+  // ── Formatadores ────────────────────────────────────────────────────────────
+  const fmt = (v: number) => currencyEngine.formatar(v);
+  const fmtN = (v: number, dec = 1) => v.toFixed(dec).replace(".", ",");
+  const fmtKm = (v: number) => `${fmtN(v, 1)} km`;
+  const fmtH = (h: number) => {
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return mm > 0 ? `${hh}h${String(mm).padStart(2, "0")}min` : `${hh}h`;
+  };
+
+  // ── Captura e compartilha ───────────────────────────────────────────────────
   const compartilhar = async () => {
     if (!viewShotRef.current) return;
     setCapturing(true);
     try {
       const uri = await (viewShotRef.current as any).capture();
-
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(uri, {
-          mimeType: "image/png",
-          dialogTitle: "Compartilhar resultado SOMA",
-        });
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Compartilhar resultado SOMA" });
       } else {
         showToast({ type: "error", message: "Compartilhamento não disponível neste dispositivo." });
       }
     } catch {
-      showToast({ type: "error", message: "Erro ao capturar a tela. Tente novamente." });
+      showToast({ type: "error", message: "Erro ao capturar. Tente novamente." });
     } finally {
       setCapturing(false);
     }
@@ -105,7 +144,6 @@ export default function CompartilharScreen() {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         showToast({ type: "error", message: "Permissão para galeria negada." });
-        setCapturing(false);
         return;
       }
       const uri = await (viewShotRef.current as any).capture();
@@ -118,25 +156,28 @@ export default function CompartilharScreen() {
     }
   };
 
+  const loading = isLoading || isFetching;
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.surfaceMuted }}>
-      <AppHeader
-        title="Compartilhar"
-        subtitle="Mostre seu desempenho"
-        onBackPress={() => router.back()}
-        onMenuPress={openDrawer}
-      />
+
+      {/* ── Botão voltar minimalista ──────────────────────────────────────── */}
+      <View style={[styles.backRow, { paddingTop: insets.top + 8 }]}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={16}
+          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+        >
+          <Ionicons name="arrow-back" size={16} color={theme.colors.textMuted} />
+          <Text style={styles.backTxt}>Voltar</Text>
+        </Pressable>
+      </View>
 
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.hint}>
-          Toque em <Text style={styles.hintBold}>Compartilhar</Text> para enviar a imagem ou{" "}
-          <Text style={styles.hintBold}>Salvar</Text> para baixar na galeria.
-        </Text>
-
-        {/* ── Card capturável ──────────────────────────────────────────────── */}
+        {/* ── Card capturável ────────────────────────────────────────────── */}
         <ViewShot
           ref={viewShotRef}
           options={{ format: "png", quality: 1 }}
@@ -148,7 +189,7 @@ export default function CompartilharScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.cardBg}
           >
-            {/* ── Header da imagem ─────────────────────────────────────────── */}
+            {/* ── Cabeçalho ──────────────────────────────────────────────── */}
             <View style={styles.imgHeader}>
               <Image
                 source={require("../../assets/images/app-logo.png")}
@@ -163,123 +204,104 @@ export default function CompartilharScreen() {
               </View>
             </View>
 
-            {/* ── Nome do motorista ─────────────────────────────────────────── */}
+            {/* ── Motorista ──────────────────────────────────────────────── */}
             <View style={styles.driverRow}>
-              <View style={styles.driverAvatarWrap}>
-                <Ionicons name="person" size={22} color={theme.colors.accentBright} />
+              <View style={styles.driverAvatar}>
+                <Ionicons name="person" size={18} color={theme.colors.accentBright} />
               </View>
               <View>
                 <Text style={styles.driverName}>{nomeExibir}</Text>
                 {cidade && <Text style={styles.driverCity}>{cidade}</Text>}
-                {perfil?.categoria && (
-                  <Text style={styles.driverCat}>{perfil.categoria}</Text>
-                )}
+                {perfil?.categoria && <Text style={styles.driverCat}>{perfil.categoria}</Text>}
               </View>
             </View>
 
-            {/* ── Divider ───────────────────────────────────────────────────── */}
-            <View style={styles.imgDivider} />
+            <View style={styles.divider} />
 
-            {/* ── Conteúdo dependente de dados ─────────────────────────────── */}
+            {/* ── Cards ──────────────────────────────────────────────────── */}
             {loading || !data ? (
-              <View style={{ paddingVertical: 32, alignItems: "center" }}>
+              <View style={{ paddingVertical: 40, alignItems: "center" }}>
                 <ActivityIndicator color={theme.colors.accentBright} />
                 <Text style={[styles.driverCity, { marginTop: 8 }]}>Carregando…</Text>
               </View>
             ) : (
               <>
-                {/* ── KPIs principais ─────────────────────────────────────── */}
-                <View style={styles.mainKpiRow}>
-                  <View style={styles.mainKpi}>
-                    <Text style={styles.mainKpiLabel}>Ganho Bruto</Text>
-                    <Text style={styles.mainKpiValue}>{currencyEngine.formatar(data.ganhoMes)}</Text>
-                  </View>
-                  <View style={[styles.mainKpiDivider]} />
-                  <View style={styles.mainKpi}>
-                    <Text style={styles.mainKpiLabel}>Líquido</Text>
-                    <Text style={[styles.mainKpiValue, { color: theme.colors.accentBright }]}>
-                      {currencyEngine.formatar(data.ganhoMesLiquido)}
-                    </Text>
-                  </View>
+                <SecLabel>Financeiro</SecLabel>
+                <View style={styles.grid}>
+                  <MiniCard icon="cash" label="Ganho Bruto" value={fmt(data.ganhoBruto)} color={theme.colors.primary} />
+                  <MiniCard icon="leaf" label="Ganho Líquido" value={fmt(data.ganhoLiquido)} color={theme.colors.success} pct={data.pctLiquido} />
+                  <MiniCard icon="star" label="Ganho Real" value={fmt(data.ganhoReal)} color={data.ganhoReal >= 0 ? theme.colors.accent : theme.colors.danger} pct={data.pctReal} />
                 </View>
 
-                {/* ── Meta ────────────────────────────────────────────────── */}
-                <View style={styles.metaBlock}>
-                  <View style={styles.metaTopRow}>
-                    <Text style={styles.metaTitle}>Meta do mês</Text>
-                    <Text style={styles.metaPct}>{data.percentualMes}%</Text>
-                  </View>
-                  <View style={styles.progressOuter}>
-                    <View
-                      style={[
-                        styles.progressInner,
-                        {
-                          width: `${Math.min(100, data.percentualMes)}%`,
-                          backgroundColor:
-                            data.percentualMes >= 100
-                              ? theme.colors.success
-                              : theme.colors.accentBright,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.metaSub}>
-                    {currencyEngine.formatar(data.ganhoMes)} de{" "}
-                    {currencyEngine.formatar(data.metaMensal)}
-                    {data.percentualMes >= 100 ? " · META BATIDA! 🏆" : ""}
-                  </Text>
+                <SecLabel>Custos</SecLabel>
+                <View style={styles.grid}>
+                  <MiniCard icon="alert-circle" label="Total Custos" value={fmt(data.totalCustos)} color={theme.colors.danger} pct={data.pctCustos} />
+                  <MiniCard icon="flame" label="Combustível" value={fmt(data.custoCombustivel)} color={theme.colors.warning} pct={data.pctCombustivel} />
+                  <MiniCard icon="wallet" label="Custo Fixo" value={fmt(data.custoFixo)} color={theme.colors.purple} pct={data.pctCustoFixo} />
                 </View>
 
-                {/* ── Grid de stats ────────────────────────────────────────── */}
-                <View style={styles.statsGrid}>
-                  <StatCard
-                    icon="trending-up"
-                    label="Ganho semana"
-                    value={currencyEngine.formatar(data.ganhoSemana)}
-                    color={theme.colors.primary}
-                  />
-                  <StatCard
-                    icon="leaf"
-                    label="Líquido semana"
-                    value={currencyEngine.formatar(data.lucroLiquidoSemana)}
-                    color={theme.colors.success}
-                  />
-                  <StatCard
-                    icon="today"
-                    label="Hoje"
-                    value={currencyEngine.formatar(data.ganhoHoje)}
-                    color={theme.colors.accent}
-                  />
-                  <StatCard
-                    icon="remove-circle"
-                    label="Despesas mês"
-                    value={currencyEngine.formatar(data.despesasMes)}
-                    color={theme.colors.danger}
-                  />
+                {data.despesasItems.length > 0 && (
+                  <>
+                    <SecLabel>Despesas Variáveis</SecLabel>
+                    {chunk(data.despesasItems, 3).map((row, ri) => (
+                      <View key={ri} style={styles.grid}>
+                        {row.map((item) => (
+                          <MiniCard key={item.nome} icon="receipt" label={item.nome} value={fmt(item.valor)} color={theme.colors.orange} pct={item.pct} />
+                        ))}
+                        {row.length === 2 && <View style={{ width: SHARE_W }} />}
+                        {row.length === 1 && <><View style={{ width: SHARE_W }} /><View style={{ width: SHARE_W }} /></>}
+                      </View>
+                    ))}
+                  </>
+                )}
+
+                <SecLabel>Atividade</SecLabel>
+                <View style={styles.grid}>
+                  <MiniCard icon="car" label="KM Trabalhado" value={data.kmTrabalho > 0 ? fmtKm(data.kmTrabalho) : "—"} color={theme.colors.primary} />
+                  <MiniCard icon="time" label="Horas Trab." value={data.horas > 0 ? fmtH(data.horas) : "—"} color={theme.colors.accent} />
+                  <MiniCard icon="home" label="KM Pessoal" value={data.kmPessoal != null ? fmtKm(data.kmPessoal) : "—"} color={theme.colors.indigo} />
+                </View>
+                <View style={styles.grid}>
+                  <MiniCard icon="sunny" label="Dias Trab." value={String(data.diasTrabalhados)} color={theme.colors.success} />
+                  <MiniCard icon="navigate" label="Corridas" value={String(data.corridas)} color={theme.colors.primary} />
+                  <MiniCard icon="timer" label="Corridas/hora" value={data.corridasPorHora > 0 ? fmtN(data.corridasPorHora) : "—"} color={theme.colors.warning} />
                 </View>
 
-                {/* ── Meta diária ───────────────────────────────────────────── */}
-                <View style={styles.metaDiariaRow}>
-                  <Ionicons name="flag" size={13} color={theme.colors.accentBright} />
-                  <Text style={styles.metaDiariaTxt}>
-                    Meta diária ajustada:{" "}
-                    <Text style={styles.metaDiariaVal}>
-                      {currencyEngine.formatar(data.metaDiariaAjustada)}
-                    </Text>
-                  </Text>
+                <SecLabel>Médias</SecLabel>
+                <View style={styles.grid}>
+                  <MiniCard icon="calendar" label="Ganho / dia" value={data.ganhoPorDia > 0 ? fmt(data.ganhoPorDia) : "—"} color={theme.colors.primary} />
+                  <MiniCard icon="hourglass" label="Horas / dia" value={data.horasPorDia > 0 ? fmtH(data.horasPorDia) : "—"} color={theme.colors.accent} />
+                  <MiniCard icon="speedometer-outline" label="KM / corrida" value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"} color={theme.colors.indigo} />
+                </View>
+                <View style={styles.grid}>
+                  <MiniCard icon="cash-outline" label="Ganho/corrida" value={data.ganhoPorCorrida > 0 ? fmt(data.ganhoPorCorrida) : "—"} color={theme.colors.success} />
+                  <MiniCard icon="trending-up" label="Ganho / hora" value={data.ganhoPorHora > 0 ? fmt(data.ganhoPorHora) : "—"} color={theme.colors.primary} />
+                  <MiniCard icon="leaf" label="Ganho real/hora" value={data.ganhoRealPorHora !== 0 ? fmt(data.ganhoRealPorHora) : "—"} color={data.ganhoRealPorHora >= 0 ? theme.colors.success : theme.colors.danger} />
+                </View>
+
+                <SecLabel>Índices</SecLabel>
+                <View style={styles.grid}>
+                  <MiniCard icon="trending-down" label="Custo / hora" value={data.custoPorHora > 0 ? fmt(data.custoPorHora) : "—"} color={theme.colors.danger} />
+                  <MiniCard icon="remove-circle" label="Custo/corrida" value={data.custoPorCorrida > 0 ? fmt(data.custoPorCorrida) : "—"} color={theme.colors.orange} />
+                  <MiniCard icon="analytics" label="Custo / km" value={data.custoPorKm > 0 ? `R$ ${fmtN(data.custoPorKm, 2)}` : "—"} color={theme.colors.warning} />
+                </View>
+                <View style={styles.grid}>
+                  <MiniCard icon="add-circle" label="Ganho / km" value={data.ganhoPorKm > 0 ? `R$ ${fmtN(data.ganhoPorKm, 2)}` : "—"} color={theme.colors.primary} />
+                  <MiniCard icon="leaf-outline" label="Ganho real/km" value={data.ganhoPorKmReal !== 0 ? `R$ ${fmtN(data.ganhoPorKmReal, 2)}` : "—"} color={data.ganhoPorKmReal >= 0 ? theme.colors.success : theme.colors.danger} />
+                  <View style={{ width: SHARE_W }} />
                 </View>
               </>
             )}
 
-            {/* ── Rodapé da imagem ─────────────────────────────────────────── */}
-            <View style={styles.imgFooter}>
-              <View style={styles.imgFooterDivider} />
-              <Text style={styles.imgFooterTxt}>nexortec.com.br · SOMA App 2026</Text>
+            {/* ── Rodapé ─────────────────────────────────────────────────── */}
+            <View style={styles.footer}>
+              <View style={styles.footerLine} />
+              <Text style={styles.footerTxt}>nexortec.com.br · SOMA App 2026</Text>
             </View>
           </LinearGradient>
         </ViewShot>
 
-        {/* ── Botões de ação ───────────────────────────────────────────────── */}
+        {/* ── Botões ─────────────────────────────────────────────────────── */}
         <View style={styles.actionsRow}>
           <Pressable
             style={({ pressed }) => [styles.btnShare, pressed && { opacity: 0.85 }]}
@@ -297,9 +319,7 @@ export default function CompartilharScreen() {
               ) : (
                 <Ionicons name="share-social" size={20} color="#fff" />
               )}
-              <Text style={styles.btnTxt}>
-                {capturing ? "Aguarde…" : "Compartilhar"}
-              </Text>
+              <Text style={styles.btnTxt}>{capturing ? "Aguarde…" : "Compartilhar"}</Text>
             </LinearGradient>
           </Pressable>
 
@@ -312,29 +332,31 @@ export default function CompartilharScreen() {
             <Text style={styles.btnSaveTxt}>Salvar</Text>
           </Pressable>
         </View>
-
-        <Text style={styles.dica}>
-          Dica: a imagem inclui seus principais resultados do mês e é ideal para compartilhar nas redes sociais.
-        </Text>
       </ScrollView>
     </View>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  hint: {
-    ...theme.font.regular,
+  backRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+  },
+  backTxt: {
+    ...theme.font.medium,
     fontSize: 13,
     color: theme.colors.textMuted,
-    textAlign: "center",
-    marginBottom: 16,
   },
-  hintBold: {
-    ...theme.font.semibold,
-    color: theme.colors.primary,
-  },
+
+  // Card
   cardOuter: {
     borderRadius: 20,
     overflow: "hidden",
@@ -345,53 +367,53 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  // Header da imagem
+  // Header
   imgHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   imgLogo: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
   },
   imgBrand: {
     ...theme.font.bold,
-    fontSize: 24,
+    fontSize: 22,
     color: "#fff",
     letterSpacing: 2,
   },
   imgFullName: {
     ...theme.font.regular,
-    fontSize: 10,
-    color: "rgba(255,255,255,0.65)",
+    fontSize: 9,
+    color: "rgba(255,255,255,0.6)",
     marginTop: 2,
   },
   mesLabel: {
     backgroundColor: "rgba(255,255,255,0.12)",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   mesLabelTxt: {
     ...theme.font.semibold,
-    fontSize: 12,
+    fontSize: 11,
     color: theme.colors.accentBright,
   },
 
-  // Driver
+  // Motorista
   driverRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 14,
   },
-  driverAvatarWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  driverAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
@@ -400,138 +422,52 @@ const styles = StyleSheet.create({
   },
   driverName: {
     ...theme.font.bold,
-    fontSize: 17,
+    fontSize: 15,
     color: "#fff",
   },
   driverCity: {
     ...theme.font.regular,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.65)",
+    fontSize: 10,
+    color: "rgba(255,255,255,0.6)",
     marginTop: 1,
   },
   driverCat: {
     ...theme.font.medium,
-    fontSize: 11,
+    fontSize: 10,
     color: theme.colors.accentBright,
     marginTop: 1,
   },
 
-  imgDivider: {
+  divider: {
     height: 1,
     backgroundColor: "rgba(255,255,255,0.15)",
-    marginBottom: 16,
-  },
-
-  // KPIs principais
-  mainKpiRow: {
-    flexDirection: "row",
-    marginBottom: 16,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius: 14,
-    overflow: "hidden",
-  },
-  mainKpi: {
-    flex: 1,
-    padding: 14,
-    alignItems: "center",
-  },
-  mainKpiDivider: {
-    width: 1,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    marginVertical: 10,
-  },
-  mainKpiLabel: {
-    ...theme.font.regular,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.65)",
-    marginBottom: 4,
-  },
-  mainKpiValue: {
-    ...theme.font.bold,
-    fontSize: 20,
-    color: "#fff",
-  },
-
-  // Meta
-  metaBlock: {
-    marginBottom: 14,
-    backgroundColor: "rgba(255,255,255,0.07)",
-    borderRadius: 12,
-    padding: 12,
-  },
-  metaTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  metaTitle: {
-    ...theme.font.medium,
-    fontSize: 12,
-    color: "rgba(255,255,255,0.75)",
-  },
-  metaPct: {
-    ...theme.font.bold,
-    fontSize: 14,
-    color: theme.colors.accentBright,
-  },
-  progressOuter: {
-    height: 6,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 6,
-  },
-  progressInner: {
-    height: 6,
-    borderRadius: 3,
-  },
-  metaSub: {
-    ...theme.font.regular,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
-  },
-
-  // Stats grid
-  statsGrid: {
-    gap: 8,
     marginBottom: 12,
   },
 
-  // Meta diária
-  metaDiariaRow: {
+  // Grid de mini cards
+  grid: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 16,
-  },
-  metaDiariaTxt: {
-    ...theme.font.regular,
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-  },
-  metaDiariaVal: {
-    ...theme.font.bold,
-    color: theme.colors.accentBright,
+    gap: 4,
+    marginBottom: 4,
   },
 
-  // Rodapé da imagem
-  imgFooter: {
-    marginTop: 4,
+  // Rodapé
+  footer: {
+    marginTop: 10,
   },
-  imgFooterDivider: {
+  footerLine: {
     height: 1,
     backgroundColor: "rgba(255,255,255,0.12)",
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  imgFooterTxt: {
+  footerTxt: {
     ...theme.font.regular,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.45)",
+    fontSize: 10,
+    color: "rgba(255,255,255,0.4)",
     textAlign: "center",
   },
 
-  // Botões
+  // Botões de ação
   actionsRow: {
     flexDirection: "row",
     gap: 10,
@@ -573,41 +509,75 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.primary,
   },
-
-  dica: {
-    ...theme.font.regular,
-    fontSize: 12,
-    color: theme.colors.textSubtle,
-    textAlign: "center",
-    marginTop: 14,
-    paddingHorizontal: 8,
-  },
 });
 
-const card = StyleSheet.create({
-  wrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius: 10,
-    padding: 10,
+// ─── Mini card styles ─────────────────────────────────────────────────────────
+
+const mc = StyleSheet.create({
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
     borderLeftWidth: 3,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginBottom: 3,
+  },
   iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 16,
+    height: 16,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
   },
   label: {
+    flex: 1,
     ...theme.font.regular,
-    fontSize: 10,
-    color: "rgba(255,255,255,0.65)",
+    fontSize: 8,
+    color: theme.colors.textMuted,
+    lineHeight: 10,
+  },
+  valueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
   },
   value: {
     ...theme.font.bold,
-    fontSize: 14,
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  pct: {
+    ...theme.font.medium,
+    fontSize: 8,
+    opacity: 0.85,
+  },
+});
+
+// ─── Section label styles (dark bg) ──────────────────────────────────────────
+
+const sl = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 5,
+    marginTop: 8,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  txt: {
+    ...theme.font.semibold,
+    fontSize: 9,
+    color: "rgba(255,255,255,0.7)",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
 });
