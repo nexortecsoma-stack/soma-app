@@ -386,26 +386,31 @@ export default function CPMAScreen() {
                 color={theme.colors.primary}
               />
               <MiniCard
+                icon="hourglass"
+                label="Horas / dia"
+                value={data.horasPorDia > 0 ? `${fmtN(data.horasPorDia, 1)}h` : "—"}
+                color={theme.colors.accent}
+              />
+              <MiniCard
                 icon="trending-up"
                 label="Ganho / hora"
                 value={data.ganhoPorHora > 0 ? fmt(data.ganhoPorHora) : "—"}
                 color={theme.colors.success}
               />
+            </View>
+            <View style={styles.grid}>
               <MiniCard
                 icon="cash-outline"
                 label="Ganho / corrida"
                 value={data.ganhoPorCorrida > 0 ? fmt(data.ganhoPorCorrida) : "—"}
                 color={theme.colors.accent}
               />
-            </View>
-            <View style={styles.grid}>
               <MiniCard
                 icon="speedometer-outline"
                 label="KM / corrida"
                 value={data.kmPorCorrida > 0 ? fmtKm(data.kmPorCorrida) : "—"}
                 color={theme.colors.indigo}
               />
-              <View style={mini.cardEmpty} />
               <View style={mini.cardEmpty} />
             </View>
 

@@ -38,6 +38,7 @@ export interface CPMAData {
 
   // Médias
   ganhoPorDia: number;
+  horasPorDia: number;
   ganhoPorHora: number;
   ganhoPorCorrida: number;
   kmPorCorrida: number;
@@ -195,6 +196,7 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         corridasPorHora: horas > 0 ? corridas / horas : 0,
 
         ganhoPorDia: diasTrabalhados > 0 ? ganhoBruto / diasTrabalhados : 0,
+        horasPorDia: diasTrabalhados > 0 ? horas / diasTrabalhados : 0,
         ganhoPorHora: horas > 0 ? ganhoBruto / horas : 0,
         ganhoPorCorrida: corridas > 0 ? ganhoBruto / corridas : 0,
         kmPorCorrida: corridas > 0 ? kmTrabalho / corridas : 0,
