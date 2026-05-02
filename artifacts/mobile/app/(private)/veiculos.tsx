@@ -87,6 +87,7 @@ export default function Veiculos() {
     setTipoSeguro(v.tipo_seguro ?? "mensal");
     setValorSeguro(v.valor_seguro ?? 0);
     setDiaVencSeguro(v.dia_vencimento_seguro ? String(v.dia_vencimento_seguro) : "");
+    setDataInicioSeguro(v.data_inicio_seguro ?? "");
     setIsentoIpva(v.isento_ipva ?? false);
     setGasolinaPreco(v.gasolina_valor ?? 0);
     setGasolinaConsumo(v.gasolina_consumo_km_l != null ? String(v.gasolina_consumo_km_l) : "");
