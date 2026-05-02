@@ -143,6 +143,18 @@ function RankingCard({
     ? `${dateEngine.formatarBR(item.periodo_inicio)} – ${item.periodo_fim ? dateEngine.formatarBR(item.periodo_fim) : "?"}`
     : null;
 
+  // Última atualização formatada como "dd/mm hh:mm"
+  const atualizadoTxt = item.atualizado_em
+    ? (() => {
+        const d = new Date(item.atualizado_em);
+        const dd = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        return `${dd}/${mm} ${hh}:${min}`;
+      })()
+    : null;
+
   return (
     <Pressable
       onPress={() => setAberto((v) => !v)}
@@ -189,8 +201,15 @@ function RankingCard({
       {/* ── Painel expandido ── */}
       {aberto && (
         <View style={styles.expandPanel}>
-          {periodoTxt && (
-            <Text style={styles.periodoSub}>Período: {periodoTxt}</Text>
+          {(periodoTxt || atualizadoTxt) && (
+            <View style={styles.metaRow}>
+              {periodoTxt
+                ? <Text style={styles.metaTxt} numberOfLines={1}>📅 {periodoTxt}</Text>
+                : <View />}
+              {atualizadoTxt
+                ? <Text style={styles.metaTxtRight} numberOfLines={1}>🕐 {atualizadoTxt}</Text>
+                : null}
+            </View>
           )}
           <View style={styles.statsGrid}>
             {stats.map((s) => (
@@ -543,10 +562,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 10,
     backgroundColor: theme.colors.surfaceMuted,
   },
-  periodoSub: {
-    fontSize: 10, color: theme.colors.textMuted,
-    ...theme.font.medium, marginBottom: 8, textAlign: "center",
+  metaRow: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    marginBottom: 8,
   },
+  metaTxt: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.medium, flex: 1 },
+  metaTxtRight: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.medium, textAlign: "right", flexShrink: 0, marginLeft: 8 },
   statsGrid: { flexDirection: "row", gap: 6 },
   statCell: {
     flex: 1, backgroundColor: "#fff",
