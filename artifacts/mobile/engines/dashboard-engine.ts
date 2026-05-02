@@ -74,7 +74,6 @@ export const dashboardEngine = {
       return d >= inicioSemana && d <= fimSemana;
     });
     const despesasSemana = financeiroEngine.totalDespesas(despesasSemanaArr);
-    const lucroLiquidoSemana = ganhoSemana - despesasSemana;
 
     const inicioMes = dateEngine.primeiroDiaMes(input.mesReferencia);
     const fimMes = dateEngine.ultimoDiaMes(input.mesReferencia);
@@ -114,6 +113,21 @@ export const dashboardEngine = {
     });
 
     const ganhoMesLiquido = ganhoMes - despesasMes - custoCombustivelMes - custoFixo.custoMensal;
+
+    // Lucro líquido da semana: despesas reais + combustível proporcional + custo fixo proporcional
+    const jornadasSemana = input.jornadas.filter((j) => {
+      const d = dateEngine.parseISO(j.data_jornada);
+      return d >= inicioSemana && d <= fimSemana;
+    });
+    const kmSemana = jornadasSemana.reduce((s, j) => s + (Number(j.km_percorrido) || 0), 0);
+    const custoCombustivelSemana = combustivelEngine.custoEstimado({
+      km: kmSemana,
+      veiculo: input.veiculo,
+      abastecimentos: input.abastecimentos,
+    });
+    // Custo fixo proporcional: 1 semana = 1/4.333 do mês
+    const custoFixoSemana = custoFixo.custoMensal / 4.333;
+    const lucroLiquidoSemana = ganhoSemana - despesasSemana - custoCombustivelSemana - custoFixoSemana;
 
     const metaMensal = input.perfil?.meta_mensal ?? 10000;
     const metaCalc = metaEngine.calcular({
