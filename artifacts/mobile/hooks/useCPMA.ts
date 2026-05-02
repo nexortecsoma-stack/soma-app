@@ -26,6 +26,9 @@ export interface CPMAData {
   // Despesas variáveis individuais (agrupadas por categoria, pct com 1 decimal)
   despesasItems: Array<{ nome: string; valor: number; pct: number }>;
 
+  // Itens de custo fixo ativos (proporcional ao período)
+  custoFixoItens: Array<{ descricao: string; valor: number; pct: number }>;
+
   // Quilometragem e tempo
   kmTrabalho: number;
   kmPessoal: number | null;
@@ -174,6 +177,16 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         pct: pct1(i.valor),
       }));
 
+      const custoFixoItens = custoFixoCalc.itens
+        .filter((i) => i.ativo)
+        .map((i) => ({
+          descricao: i.descricao,
+          valor: i.valorMensal * (diasPeriodo / 30),
+          pct: custoFixoCalc.custoMensal > 0
+            ? Math.round((i.valorMensal / custoFixoCalc.custoMensal) * 1000) / 10
+            : 0,
+        }));
+
       return {
         ganhoBruto,
         ganhoLiquido,
@@ -188,6 +201,7 @@ export function useCPMA(filtro: FiltroPeriodo, refDate: Date) {
         pctCombustivel: pct1(custoCombustivel),
         pctCustoFixo: pct1(custoFixo),
         despesasItems,
+        custoFixoItens,
 
         kmTrabalho,
         kmPessoal,

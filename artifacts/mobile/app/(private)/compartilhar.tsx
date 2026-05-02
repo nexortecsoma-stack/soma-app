@@ -360,9 +360,16 @@ export default function CompartilharScreen() {
                     <Text style={styles.bdVal}>{fmt(data.ganhoLiquido)}</Text>
                   </View>
                   <View style={styles.bdRow}>
-                    <Text style={styles.bdLbl}>Custos fixos</Text>
+                    <Text style={[styles.bdLbl, { fontWeight: "600" }]}>Custos fixos</Text>
                     <Text style={[styles.bdVal, { color: theme.colors.danger }]}>- {fmt(data.custoFixo)}</Text>
                   </View>
+                  {data.custoFixoItens.map((item) => (
+                    <View key={item.descricao} style={styles.bdSubRow}>
+                      <Text style={styles.bdSubLbl} numberOfLines={1}>↳ {item.descricao}</Text>
+                      <Text style={styles.bdSubPct}>{item.pct.toFixed(1)}%</Text>
+                      <Text style={styles.bdSubVal}>- {fmt(item.valor)}</Text>
+                    </View>
+                  ))}
                   <View style={styles.bdTotal}>
                     <Text style={styles.bdTotalLbl}>= Ganho real</Text>
                     <Text style={[styles.bdTotalVal, { color: data.ganhoReal >= 0 ? theme.colors.success : theme.colors.danger }]}>{fmt(data.ganhoReal)}</Text>
@@ -755,6 +762,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#fff",
   },
+  bdSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 2,
+    paddingLeft: 10,
+  },
+  bdSubLbl: {
+    ...theme.font.regular,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.5)",
+    flex: 1,
+  },
+  bdSubPct: {
+    ...theme.font.regular,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.4)",
+    marginRight: 6,
+  },
+  bdSubVal: {
+    ...theme.font.medium,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.55)",
+  },
+
   bdTotal: {
     flexDirection: "row",
     justifyContent: "space-between",
