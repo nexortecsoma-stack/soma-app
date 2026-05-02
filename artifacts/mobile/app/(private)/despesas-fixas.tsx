@@ -185,11 +185,11 @@ export default function DespesasFixas() {
                   </Pressable>
                 </View>
 
-                {/* Custo SOMA vs Mensal */}
+                {/* Custo SOMA vs Mensal vs Anual */}
                 <View style={styles.modalValRow}>
                   <ModalVal
                     label="Custo SOMA"
-                    sublabel={`${itemSelecionado.detalhamento.diasUteisDesdeInicio} dias úteis`}
+                    sublabel={`${itemSelecionado.detalhamento.diasUteisItemSoma ?? itemSelecionado.detalhamento.diasUteisDesdeInicio} dias úteis`}
                     valor={currencyEngine.formatar(itemSelecionado.custoSoma)}
                     cor={theme.colors.primary}
                   />
@@ -206,18 +206,49 @@ export default function DespesasFixas() {
                   />
                 </View>
 
-                {/* Período */}
+                {/* Período do contrato / referência */}
+                <View style={styles.periodoBlocoLabel}>
+                  <Ionicons name="document-text-outline" size={11} color={theme.colors.textMuted} />
+                  <Text style={styles.periodoBlocoTxt}>Período do contrato / referência</Text>
+                </View>
                 <View style={styles.periodoRow}>
                   <View style={styles.periodoItem}>
-                    <Text style={styles.periodoLabel}>Início dos registros</Text>
+                    <Text style={styles.periodoLabel}>Início</Text>
                     <Text style={styles.periodoVal}>{itemSelecionado.detalhamento.termoInicial}</Text>
                   </View>
                   <Ionicons name="arrow-forward" size={16} color={theme.colors.textMuted} />
                   <View style={[styles.periodoItem, { alignItems: "flex-end" }]}>
-                    <Text style={styles.periodoLabel}>Termo final</Text>
+                    <Text style={styles.periodoLabel}>Fim</Text>
                     <Text style={styles.periodoVal}>{itemSelecionado.detalhamento.termoFinal}</Text>
                   </View>
                 </View>
+
+                {/* Período SOMA (interseção registros × contrato) */}
+                {itemSelecionado.detalhamento.somaInicio && (
+                  <>
+                    <View style={[styles.periodoBlocoLabel, { marginTop: 8 }]}>
+                      <Ionicons name="layers-outline" size={11} color={theme.colors.primary} />
+                      <Text style={[styles.periodoBlocoTxt, { color: theme.colors.primary }]}>
+                        Período SOMA ({itemSelecionado.detalhamento.diasUteisItemSoma ?? 0} dias úteis)
+                      </Text>
+                    </View>
+                    <View style={[styles.periodoRow, styles.periodoRowSoma]}>
+                      <View style={styles.periodoItem}>
+                        <Text style={styles.periodoLabel}>Início SOMA</Text>
+                        <Text style={[styles.periodoVal, { color: theme.colors.primary }]}>
+                          {itemSelecionado.detalhamento.somaInicio}
+                        </Text>
+                      </View>
+                      <Ionicons name="arrow-forward" size={16} color={theme.colors.primary + "80"} />
+                      <View style={[styles.periodoItem, { alignItems: "flex-end" }]}>
+                        <Text style={styles.periodoLabel}>Fim SOMA</Text>
+                        <Text style={[styles.periodoVal, { color: theme.colors.primary }]}>
+                          {itemSelecionado.detalhamento.somaFim}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                )}
 
                 {/* Custo diário */}
                 <View style={styles.diariaRow}>
@@ -345,10 +376,23 @@ const styles = StyleSheet.create({
   modalValLabel: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.semibold, textTransform: "uppercase" },
   modalValSub: { fontSize: 9, color: theme.colors.textMuted, ...theme.font.regular, marginTop: 1 },
   modalValVal: { fontSize: 14, color: theme.colors.text, ...theme.font.bold, marginTop: 4 },
+  periodoBlocoLabel: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    marginBottom: 4, marginTop: 4,
+  },
+  periodoBlocoTxt: {
+    ...theme.font.semibold, fontSize: 10, color: theme.colors.textMuted,
+    textTransform: "uppercase", letterSpacing: 0.4,
+  },
   periodoRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     backgroundColor: theme.colors.surfaceMuted, borderRadius: theme.radius.md,
-    padding: 12, marginBottom: 10,
+    padding: 12, marginBottom: 4,
+  },
+  periodoRowSoma: {
+    backgroundColor: theme.colors.primary + "10",
+    borderWidth: 1, borderColor: theme.colors.primary + "25",
+    marginBottom: 10,
   },
   periodoItem: { flex: 1 },
   periodoLabel: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.medium },
