@@ -151,8 +151,15 @@ export const dashboardEngine = {
       semanal.push({ dia: dateEngine.diaSemanaCurto(d), diaNum: d.getDate(), valor });
     }
 
+    const manutencoesMes = input.manutencoes.filter((m) => {
+      const d = dateEngine.parseISO(m.data_manutencao);
+      return d >= inicioMes && d <= fimMes;
+    });
+    const custoManutencaoMes = manutencoesMes.reduce((s, m) => s + (Number(m.valor) || 0), 0);
+
     const cats = financeiroEngine.agruparPorCategoria(despesasMesArr);
     if (custoCombustivelMes > 0) cats["combustivel"] = custoCombustivelMes;
+    if (custoManutencaoMes > 0) cats["manutencao"] = (cats["manutencao"] ?? 0) + custoManutencaoMes;
     if (custoFixo.custoMensal > 0) cats["custo_fixo"] = custoFixo.custoMensal;
     const rosca = Object.entries(cats)
       .map(([categoria, valor], idx) => ({
