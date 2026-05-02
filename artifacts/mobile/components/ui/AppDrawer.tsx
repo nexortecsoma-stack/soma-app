@@ -35,6 +35,8 @@ const ITEMS: Item[] = [
   { label: "Despesas Fixas", icon: "wallet", href: "/(private)/despesas-fixas", pro: true },
   { label: "Conferir Hodômetro", icon: "git-compare", href: "/(private)/conferir-hodometro", pro: true },
   { label: "Ranking SOMA", icon: "trophy", href: "/(private)/ranking", pro: true },
+  { label: "CPMA – Controle Geral", icon: "stats-chart", href: "/(private)/cpma", pro: true },
+  { label: "Compartilhar resultado", icon: "share-social", href: "/(private)/compartilhar" },
   { label: "Configurações", icon: "settings", href: "/(private)/configuracoes" },
   { label: "Perfil", icon: "person", href: "/(private)/perfil" },
   { label: "Planos detalhados", icon: "star", href: "/(private)/planos" },
