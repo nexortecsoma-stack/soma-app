@@ -272,8 +272,10 @@ export default function MeusGanhos() {
   }, [todosGanhos.data]);
 
   const datasOcupadasGanhos = useMemo(
-    () => Array.from(ganhosPorData.keys()).filter((d) => d !== editandoData),
-    [ganhosPorData, editandoData],
+    () =>
+      [...new Set((todosGanhos.data ?? []).map((g) => g.data_ganho))]
+        .filter((d) => d !== editandoData),
+    [todosGanhos.data, editandoData],
   );
 
   const isSavingEdicao = remove.isPending || update.isPending || create.isPending;

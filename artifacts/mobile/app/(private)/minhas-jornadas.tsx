@@ -97,10 +97,10 @@ export default function MinhasJornadas() {
 
   const datasOcupadasJornadas = useMemo(
     () =>
-      (list.data ?? [])
+      (todasJornadas.data ?? [])
         .map((j) => j.data_jornada)
         .filter((d) => d !== (editandoJornada?.data_jornada ?? "")),
-    [list.data, editandoJornada],
+    [todasJornadas.data, editandoJornada],
   );
 
   const isSavingEdicao =
