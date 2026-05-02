@@ -90,7 +90,7 @@ export function AppDonutChart({
         ) : (
           data.slice(0, 6).map((d, i) => {
             const base = totalRef != null && totalRef > 0 ? totalRef : total;
-            const pct = base > 0 ? Math.round((d.valor / base) * 100) : 0;
+            const pct = base > 0 ? (d.valor / base * 100).toFixed(2) : "0.00";
             return (
               <View key={i} style={styles.legendaItem}>
                 <View style={[styles.bullet, { backgroundColor: d.cor }]} />
@@ -99,7 +99,7 @@ export function AppDonutChart({
                     <Text style={styles.legendaNome}>
                       {legendaCategoria(d.categoria)}
                     </Text>
-                    <Text style={[styles.legendaPct, { color: d.cor }]}>{pct}%</Text>
+                    <Text style={[styles.legendaPct, { color: d.cor }]}> {pct}%</Text>
                   </View>
                   <Text style={styles.legendaValor}>
                     ({currencyEngine.formatar(d.valor)})
@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
   legendaItem: { flexDirection: "row", alignItems: "flex-start" },
   bullet: { width: 8, height: 8, borderRadius: 4, marginRight: 6, marginTop: 3, flexShrink: 0 },
   legendaTextos: { flex: 1 },
-  legendaNomeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  legendaNome: { fontSize: 11, color: theme.colors.text, ...theme.font.medium, flexShrink: 1, marginRight: 2 },
+  legendaNomeRow: { flexDirection: "row", alignItems: "center" },
+  legendaNome: { fontSize: 11, color: theme.colors.text, ...theme.font.medium, flexShrink: 1 },
   legendaPct: { fontSize: 11, ...theme.font.bold, flexShrink: 0 },
   legendaValor: { fontSize: 10, color: theme.colors.textMuted, ...theme.font.regular, marginTop: 1 },
   vazio: { color: theme.colors.textMuted, fontSize: 12, ...theme.font.regular },
